@@ -66,14 +66,14 @@ async function main() {
 
   // ── Games ─────────────────────────────────────────────────────────────────────
   const games = [
-    { name: 'Texas Hold\'em Poker', category: 'POKER',     minStake: 10, maxStake: 500, isActive: true },
-    { name: 'Classic Baccarat',     category: 'BACCARAT',  minStake: 20, maxStake: 500, isActive: true },
-    { name: 'Blackjack 21',         category: 'BLACKJACK', minStake: 10, maxStake: 300, isActive: true },
-    { name: 'European Roulette',    category: 'ROULETTE',  minStake: 5,  maxStake: 250, isActive: true },
-    { name: 'Crash Rocket',         category: 'CRASH',     minStake: 5,  maxStake: 200, isActive: true },
-    { name: 'Lucky Slots',          category: 'SLOTS',     minStake: 1,  maxStake: 100, isActive: true },
-    { name: 'High-Low Dice',        category: 'DICE',      minStake: 1,  maxStake: 50,  isActive: true },
-    { name: 'Weekly Lotto',         category: 'LOTTO',     minStake: 5,  maxStake: 5,   isActive: true },
+    { name: "Texas Hold'em Poker", category: 'POKER',     minStake: 10, maxStake: 500, isActive: true },
+    { name: 'Classic Baccarat',    category: 'BACCARAT',  minStake: 20, maxStake: 500, isActive: true },
+    { name: 'Blackjack 21',        category: 'BLACKJACK', minStake: 10, maxStake: 300, isActive: true },
+    { name: 'European Roulette',   category: 'ROULETTE',  minStake: 5,  maxStake: 250, isActive: true },
+    { name: 'Crash Rocket',        category: 'CRASH',     minStake: 5,  maxStake: 200, isActive: true },
+    { name: 'Lucky Slots',         category: 'SLOTS',     minStake: 1,  maxStake: 100, isActive: true },
+    { name: 'High-Low Dice',       category: 'DICE',      minStake: 1,  maxStake: 50,  isActive: true },
+    { name: 'Weekly Lotto',        category: 'LOTTO',     minStake: 5,  maxStake: 5,   isActive: true },
   ];
 
   await prisma.game.deleteMany();

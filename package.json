@@ -1,12 +1,21 @@
 {
   "name": "casino-king",
   "version": "1.0.0",
-  "description": "Casino King — backend with Prisma + PostgreSQL",
+  "description": "Casino King — full-stack online casino platform monorepo",
   "private": true,
+  "license": "MIT",
+  "workspaces": [
+    "server",
+    "client",
+    "shared"
+  ],
   "prisma": {
     "seed": "node prisma/seed.js"
   },
   "scripts": {
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "install:all": "npm install --prefix server && npm install --prefix client",
     "migrate": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
     "seed": "node prisma/seed.js",
@@ -18,5 +27,8 @@
   },
   "devDependencies": {
     "prisma": "^5.14.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
