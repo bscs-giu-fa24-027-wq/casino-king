@@ -1,0 +1,23 @@
+{
+  "name": "casino-king",
+  "version": "1.0.0",
+  "description": "Casino King — full-stack online casino platform monorepo",
+  "private": true,
+  "license": "MIT",
+  "workspaces": [
+    "server",
+    "client",
+    "shared"
+  ],
+  "scripts": {
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "install:all": "npm install --prefix server && npm install --prefix client",
+    "migrate": "cd server && npm run migrate",
+    "seed": "cd server && npm run seed",
+    "studio": "cd server && npm run studio"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,150 @@
+// Prisma schema for Casino King
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── User ────────────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String
+  username      String    @unique
+  role          Role      @default(PLAYER)
+  kycStatus     KycStatus @default(PENDING)
+  country       String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  wallet        Wallet?
+  transactions  Transaction[]
+  gameSessions  GameSession[]
+  bonuses       UserBonus[]
+  referralsMade Referral[]    @relation("referrer")
+  referredBy    Referral?     @relation("referred")
+  refreshTokens RefreshToken[]
+}
+
+enum Role {
+  PLAYER
+  ADMIN
+}
+
+enum KycStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ─── Wallet ───────────────────────────────────────────────────────────────────
+
+model Wallet {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  balance   Decimal  @default(0) @db.Decimal(18, 2)
+  ckcTokens Decimal  @default(0) @db.Decimal(18, 8)
+  updatedAt DateTime @updatedAt
+}
+
+// ─── Transaction ──────────────────────────────────────────────────────────────
+
+model Transaction {
+  id        String          @id @default(uuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id])
+  type      TransactionType
+  amount    Decimal         @db.Decimal(18, 2)
+  currency  String          @default("USD")
+  status    TxStatus        @default(PENDING)
+  reference String?
+  createdAt DateTime        @default(now())
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  BET
+  WIN
+  BONUS
+  REFERRAL
+}
+
+enum TxStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REVERSED
+}
+
+// ─── GameSession ──────────────────────────────────────────────────────────────
+
+model GameSession {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  gameSlug  String
+  betAmount Decimal  @db.Decimal(18, 2)
+  outcome   Json
+  payout    Decimal  @db.Decimal(18, 2)
+  createdAt DateTime @default(now())
+}
+
+// ─── Bonus ────────────────────────────────────────────────────────────────────
+
+model Bonus {
+  id          String      @id @default(uuid())
+  code        String      @unique
+  type        BonusType
+  value       Decimal     @db.Decimal(18, 2)
+  maxUses     Int         @default(1)
+  usedCount   Int         @default(0)
+  expiresAt   DateTime?
+  createdAt   DateTime    @default(now())
+  userBonuses UserBonus[]
+}
+
+enum BonusType {
+  WELCOME
+  DEPOSIT
+  FREE_SPIN
+  REFERRAL
+}
+
+model UserBonus {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  bonusId   String
+  bonus     Bonus    @relation(fields: [bonusId], references: [id])
+  claimedAt DateTime @default(now())
+}
+
+// ─── Referral ─────────────────────────────────────────────────────────────────
+
+model Referral {
+  id         String   @id @default(uuid())
+  referrerId String
+  referrer   User     @relation("referrer", fields: [referrerId], references: [id])
+  referredId String   @unique
+  referred   User     @relation("referred", fields: [referredId], references: [id])
+  createdAt  DateTime @default(now())
+}
+
+// ─── RefreshToken ─────────────────────────────────────────────────────────────
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
