@@ -1,0 +1,293 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum KycStatus {
+  PENDING
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+enum UserRole {
+  PLAYER
+  DEALER
+  ADMIN
+}
+
+enum TransactionType {
+  PURCHASE
+  REDEMPTION
+  GAME_STAKE
+  GAME_WIN
+  BONUS
+  REFERRAL
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REVERSED
+}
+
+enum GameCategory {
+  POKER
+  BACCARAT
+  BLACKJACK
+  ROULETTE
+  CRASH
+  SLOTS
+  DICE
+  LOTTO
+}
+
+enum MissionType {
+  DAILY
+  SEASONAL
+}
+
+enum LeaderboardPeriod {
+  WEEKLY
+  MONTHLY
+}
+
+enum DealerStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum NotificationType {
+  BONUS
+  WIN
+  KYC
+  SYSTEM
+  PROMO
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String
+  fullName     String
+  countryCode  String
+  dateOfBirth  DateTime
+  kycStatus    KycStatus  @default(PENDING)
+  status       UserStatus @default(ACTIVE)
+  role         UserRole   @default(PLAYER)
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  wallet              Wallet?
+  transactions        Transaction[]
+  gameRounds          GameRound[]
+  userVip             UserVip?
+  dailyBonuses        DailyBonus[]
+  userMissions        UserMission[]
+  referralsGiven      Referral[]            @relation("ReferrerRelation")
+  referralReceived    Referral?             @relation("ReferredRelation")
+  leaderboardEntries  Leaderboard[]
+  responsibleGambling ResponsibleGambling?
+  dealer              Dealer?
+  notifications       Notification[]
+}
+
+model Wallet {
+  id                String      @id @default(uuid())
+  userId            String      @unique
+  ckcBalance        Decimal     @default(0)
+  usdReserved       Decimal     @default(0)
+  lifetimeDeposited Decimal     @default(0)
+  updatedAt         DateTime    @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id])
+  transactions Transaction[]
+}
+
+model Transaction {
+  id        String            @id @default(uuid())
+  userId    String
+  walletId  String
+  type      TransactionType
+  ckcAmount Decimal
+  usdAmount Decimal?
+  status    TransactionStatus @default(PENDING)
+  reference String?
+  createdAt DateTime          @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  wallet Wallet @relation(fields: [walletId], references: [id])
+}
+
+model TokenPackage {
+  id        String  @id @default(uuid())
+  name      String
+  usdPrice  Decimal
+  baseCkc   Int
+  bonusCkc  Int     @default(0)
+  isActive  Boolean @default(true)
+}
+
+model Game {
+  id           String       @id @default(uuid())
+  name         String
+  category     GameCategory
+  minStake     Int
+  maxStake     Int
+  isActive     Boolean      @default(true)
+  thumbnailUrl String?
+  createdAt    DateTime     @default(now())
+
+  gameRounds GameRound[]
+}
+
+model GameRound {
+  id         String   @id @default(uuid())
+  userId     String
+  gameId     String
+  stakeCkc   Decimal
+  payoutCkc  Decimal  @default(0)
+  outcome    String
+  rngSeed    String
+  rngResult  Json
+  playedAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  game Game @relation(fields: [gameId], references: [id])
+}
+
+model VipTier {
+  id         String  @id @default(uuid())
+  name       String
+  minWager   Int
+  bonusPct   Decimal
+  perks      Json
+  badgeColor String
+
+  userVips UserVip[]
+}
+
+model UserVip {
+  id                 String    @id @default(uuid())
+  userId             String    @unique
+  tierId             String
+  totalWagered       Int       @default(0)
+  currentStreakDays  Int       @default(0)
+  lastLoginBonusAt   DateTime?
+  updatedAt          DateTime  @updatedAt
+
+  user User    @relation(fields: [userId], references: [id])
+  tier VipTier @relation(fields: [tierId], references: [id])
+}
+
+model DailyBonus {
+  id         String   @id @default(uuid())
+  userId     String
+  ckcAwarded Int
+  streakDay  Int
+  claimedAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Mission {
+  id          String      @id @default(uuid())
+  title       String
+  description String
+  type        MissionType
+  targetValue Int
+  rewardCkc   Int
+  isActive    Boolean     @default(true)
+  expiresAt   DateTime?
+
+  userMissions UserMission[]
+}
+
+model UserMission {
+  id          String    @id @default(uuid())
+  userId      String
+  missionId   String
+  progress    Int       @default(0)
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  mission Mission @relation(fields: [missionId], references: [id])
+}
+
+model Referral {
+  id         String   @id @default(uuid())
+  referrerId String
+  referredId String   @unique
+  rewardCkc  Int      @default(50)
+  isPaid     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  referrer User @relation("ReferrerRelation", fields: [referrerId], references: [id])
+  referred User @relation("ReferredRelation", fields: [referredId], references: [id])
+}
+
+model Leaderboard {
+  id           String            @id @default(uuid())
+  userId       String
+  period       LeaderboardPeriod
+  totalWagered Int               @default(0)
+  rank         Int?
+  periodStart  DateTime
+  periodEnd    DateTime
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model ResponsibleGambling {
+  id                   String    @id @default(uuid())
+  userId               String    @unique
+  dailyDepositLimit    Decimal?
+  weeklyDepositLimit   Decimal?
+  selfExcludedUntil    DateTime?
+  coolingOffUntil      DateTime?
+  updatedAt            DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Dealer {
+  id            String       @id @default(uuid())
+  userId        String       @unique
+  companyName   String
+  commissionPct Decimal      @default(20)
+  totalRevenue  Decimal      @default(0)
+  status        DealerStatus @default(ACTIVE)
+  createdAt     DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      NotificationType
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}

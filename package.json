@@ -1,0 +1,22 @@
+{
+  "name": "casino-king",
+  "version": "1.0.0",
+  "description": "Casino King — backend with Prisma + PostgreSQL",
+  "private": true,
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
+  "scripts": {
+    "migrate": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "seed": "node prisma/seed.js",
+    "studio": "prisma studio",
+    "db:reset": "prisma migrate reset --force"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.14.0"
+  },
+  "devDependencies": {
+    "prisma": "^5.14.0"
+  }
+}
