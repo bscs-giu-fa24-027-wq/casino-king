@@ -59,8 +59,8 @@ try {
       maxRetriesPerRequest: 0,
     });
   }
-} catch (_) {
-  // ioredis not installed — Redis blocklist is a no-op
+} catch (initErr) {
+  logger.debug('Redis unavailable — logout blocklist is a no-op', { error: initErr.message });
 }
 
 // ─── Controllers ──────────────────────────────────────────────────────────────
@@ -79,7 +79,10 @@ async function register(req, res, next) {
       });
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    // Simple linear-time email format check (avoids ReDoS)
+    const atIdx = email.indexOf('@');
+    const dotIdx = email.lastIndexOf('.');
+    if (atIdx < 1 || dotIdx <= atIdx + 1 || dotIdx >= email.length - 1) {
       return res.status(400).json({ error: 'Invalid email format' });
     }
 
@@ -232,8 +235,8 @@ async function logout(req, res, next) {
         if (ttl > 0) {
           await redisClient.set(`blocklist:${token}`, '1', 'EX', ttl);
         }
-      } catch (_) {
-        // best-effort: ignore Redis errors
+      } catch (redisErr) {
+        logger.debug('Redis blocklist set failed during logout', { error: redisErr.message });
       }
     }
     return res.json({ message: 'Logged out successfully' });

@@ -24,8 +24,8 @@ try {
       maxRetriesPerRequest: 0,
     });
   }
-} catch (_) {
-  // ioredis not installed — blocklist check is a no-op
+} catch (initErr) {
+  logger.debug('Redis unavailable — token blocklist check is a no-op', { error: initErr.message });
 }
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
@@ -51,8 +51,8 @@ async function verifyToken(req, res, next) {
         if (blocked) {
           return res.status(401).json({ error: 'Token has been revoked' });
         }
-      } catch (_) {
-        // Redis unavailable — proceed without blocklist check
+      } catch (redisErr) {
+        logger.debug('Redis blocklist check failed', { error: redisErr.message });
       }
     }
 

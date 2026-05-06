@@ -3,6 +3,11 @@
 const prisma = require('../utils/prisma');
 const logger = require('../utils/logger');
 
+// ─── Daily bonus constants ────────────────────────────────────────────────────
+const BASE_DAILY_BONUS = 10;      // CKC awarded on day 1
+const STREAK_BONUS_PER_DAY = 5;   // additional CKC per consecutive day
+const MAX_DAILY_BONUS = 100;      // CKC cap per login day
+
 /**
  * Applies a bonus code to a user's wallet.
  * @param {string} userId
@@ -91,8 +96,8 @@ async function checkDailyBonus(userId) {
     }
   }
 
-  // 10 CKC base + 5 per extra streak day, capped at 100
-  const ckcAwarded = Math.min(10 + (streakDay - 1) * 5, 100);
+  // BASE_DAILY_BONUS CKC + STREAK_BONUS_PER_DAY per extra streak day, capped at MAX_DAILY_BONUS
+  const ckcAwarded = Math.min(BASE_DAILY_BONUS + (streakDay - 1) * STREAK_BONUS_PER_DAY, MAX_DAILY_BONUS);
 
   const wallet = await prisma.wallet.findUnique({ where: { userId } });
   if (!wallet) return null;
