@@ -255,6 +255,9 @@ model Leaderboard {
   rank         Int?
   periodStart  DateTime
   periodEnd    DateTime
+  prizePaidAt  DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 
   user User @relation(fields: [userId], references: [id])
 }
