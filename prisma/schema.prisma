@@ -81,21 +81,23 @@ enum NotificationType {
 // ─── Models ───────────────────────────────────────────────────────────────────
 
 model User {
-  id                 String     @id @default(uuid())
-  email              String     @unique
-  passwordHash       String
-  fullName           String
-  countryCode        String
-  dateOfBirth        DateTime
-  kycStatus          KycStatus  @default(PENDING)
-  kycSubmittedAt     DateTime?
-  kycReviewedAt      DateTime?
-  kycRejectionReason String?
-  status             UserStatus @default(ACTIVE)
-  role               UserRole   @default(PLAYER)
-  lastLoginAt        DateTime?
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
+  id                        String     @id @default(uuid())
+  email                     String     @unique
+  passwordHash              String
+  fullName                  String
+  countryCode               String
+  dateOfBirth               DateTime
+  kycStatus                 KycStatus  @default(PENDING)
+  kycSubmittedAt            DateTime?
+  kycReviewedAt             DateTime?
+  kycRejectionReason        String?
+  status                    UserStatus @default(ACTIVE)
+  role                      UserRole   @default(PLAYER)
+  lastLoginAt               DateTime?
+  hasDedicatedSupport       Boolean    @default(false)
+  hasPersonalAccountManager Boolean    @default(false)
+  createdAt                 DateTime   @default(now())
+  updatedAt                 DateTime   @updatedAt
 
   wallet              Wallet?
   transactions        Transaction[]
@@ -154,6 +156,7 @@ model Game {
   minStake     Int
   maxStake     Int
   isActive     Boolean      @default(true)
+  isExclusive  Boolean      @default(false)
   thumbnailUrl String?
   createdAt    DateTime     @default(now())
 

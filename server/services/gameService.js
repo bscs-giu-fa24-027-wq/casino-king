@@ -7,6 +7,7 @@ const logger = require('../utils/logger');
 const { triggerRoundsPlayed, triggerWager, triggerWinStreak } = require('./missionService');
 const tokenService = require('./tokenService');
 const { updateLeaderboard } = require('./leaderboardService');
+const vipService = require('./vipService');
 
 // ─── Card Utilities ───────────────────────────────────────────────────────────
 
@@ -422,6 +423,16 @@ async function playGame(userId, gameId, body) {
     throw err;
   }
 
+  // 1a. Enforce exclusive game access (Gold tier and above required)
+  if (game.isExclusive) {
+    const canAccess = await vipService.hasGoldAccess(userId);
+    if (!canAccess) {
+      const err = new Error('This game is exclusive to Gold VIP members and above');
+      err.status = 403;
+      throw err;
+    }
+  }
+
   // 2. Validate stake
   const { stakeCkc, clientSeed } = body;
   if (stakeCkc === undefined || stakeCkc === null || stakeCkc === '') {
@@ -497,6 +508,11 @@ async function playGame(userId, gameId, body) {
     where: { userId },
     data: { totalWagered: { increment: stakeInt } },
   });
+
+  // 8a. Check for VIP tier upgrade (best-effort, non-blocking)
+  void vipService.checkVipUpgrade(userId).catch((err) =>
+    logger.warn('VIP upgrade check failed', { userId, error: err.message })
+  );
 
   // 9. Update Leaderboard for current week and month
   await Promise.all([
