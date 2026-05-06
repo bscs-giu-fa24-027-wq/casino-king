@@ -3,6 +3,11 @@
 const prisma = require('../utils/prisma');
 const logger = require('../utils/logger');
 
+// ─── Daily bonus constants ────────────────────────────────────────────────────
+const BASE_DAILY_BONUS = 10;      // CKC awarded on day 1
+const STREAK_BONUS_PER_DAY = 5;   // additional CKC per consecutive day
+const MAX_DAILY_BONUS = 100;      // CKC cap per login day
+
 /**
  * Applies a bonus code to a user's wallet.
  * @param {string} userId
@@ -61,4 +66,73 @@ async function getUserBonuses(userId) {
   });
 }
 
-module.exports = { redeemBonus, getUserBonuses };
+/**
+ * Checks if a daily login bonus should be awarded and creates the records atomically.
+ * Creates: DailyBonus + Transaction(BONUS, COMPLETED) + Wallet increment.
+ * No-op (returns null) if already claimed today.
+ * @param {string} userId
+ * @returns {Promise<{ ckcAwarded: number, streakDay: number } | null>}
+ */
+async function checkDailyBonus(userId) {
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
+  // Already claimed today?
+  const existing = await prisma.dailyBonus.findFirst({
+    where: { userId, claimedAt: { gte: today } },
+  });
+  if (existing) return null;
+
+  // Determine streak
+  const userVip = await prisma.userVip.findUnique({ where: { userId } });
+  let streakDay = 1;
+  if (userVip?.lastLoginBonusAt) {
+    const lastBonus = new Date(userVip.lastLoginBonusAt);
+    lastBonus.setUTCHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    if (lastBonus.getTime() === yesterday.getTime()) {
+      streakDay = (userVip.currentStreakDays || 0) + 1;
+    }
+  }
+
+  // BASE_DAILY_BONUS CKC + STREAK_BONUS_PER_DAY per extra streak day, capped at MAX_DAILY_BONUS
+  const ckcAwarded = Math.min(BASE_DAILY_BONUS + (streakDay - 1) * STREAK_BONUS_PER_DAY, MAX_DAILY_BONUS);
+
+  const wallet = await prisma.wallet.findUnique({ where: { userId } });
+  if (!wallet) return null;
+
+  const ops = [
+    prisma.dailyBonus.create({ data: { userId, ckcAwarded, streakDay } }),
+    prisma.transaction.create({
+      data: {
+        userId,
+        walletId: wallet.id,
+        type: 'BONUS',
+        ckcAmount: ckcAwarded,
+        status: 'COMPLETED',
+        reference: `daily-login-day-${streakDay}`,
+      },
+    }),
+    prisma.wallet.update({
+      where: { userId },
+      data: { ckcBalance: { increment: ckcAwarded } },
+    }),
+  ];
+
+  if (userVip) {
+    ops.push(
+      prisma.userVip.update({
+        where: { userId },
+        data: { currentStreakDays: streakDay, lastLoginBonusAt: new Date() },
+      })
+    );
+  }
+
+  await prisma.$transaction(ops);
+
+  logger.info('Daily login bonus awarded', { userId, ckcAwarded, streakDay });
+  return { ckcAwarded, streakDay };
+}
+
+module.exports = { redeemBonus, getUserBonuses, checkDailyBonus };
