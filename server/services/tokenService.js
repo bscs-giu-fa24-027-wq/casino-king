@@ -5,6 +5,7 @@ const prisma = require('../utils/prisma');
 const logger = require('../utils/logger');
 const { CKC_RATE } = require('../../shared/constants');
 const vipService = require('./vipService');
+const rgService = require('./responsibleGamblingService');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -50,6 +51,9 @@ async function purchaseCkc(userId, packageId) {
 
   const usdPrice = new Prisma.Decimal(pkg.usdPrice);
   const totalCkc = new Prisma.Decimal(pkg.baseCkc).add(new Prisma.Decimal(pkg.bonusCkc));
+
+  // ── Responsible gambling: cooling-off / self-exclusion ───────────────────
+  await rgService.assertNotRestricted(userId, { action: 'make a deposit' });
 
   // ── Responsible gambling limits ──────────────────────────────────────────
   const rg = await prisma.responsibleGambling.findUnique({ where: { userId } });
