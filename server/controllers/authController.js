@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const prisma = require('../utils/prisma');
 const { signToken } = require('../services/jwtService');
 const { checkDailyBonus } = require('../services/bonusService');
+const { claimReferral } = require('../services/referralService');
 const logger = require('../utils/logger');
 
 const SALT_ROUNDS = 12;
@@ -148,6 +149,16 @@ async function register(req, res, next) {
 
     const token = signToken(user);
     logger.info('User registered', { userId: user.id, email: user.email });
+
+    // If user registered via a referral link, record the referral (best-effort)
+    const refParam = req.query.ref || req.body.ref;
+    if (refParam && refParam !== user.id) {
+      try {
+        await claimReferral(refParam, user.id);
+      } catch (refErr) {
+        logger.warn('Referral claim failed on register', { ref: refParam, userId: user.id, error: refErr.message });
+      }
+    }
 
     return res.status(201).json({ token, user: safeUser(user) });
   } catch (err) {

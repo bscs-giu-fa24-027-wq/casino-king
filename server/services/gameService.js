@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const { Prisma } = require('@prisma/client');
 const prisma = require('../utils/prisma');
 const logger = require('../utils/logger');
+const { triggerRoundsPlayed, triggerWager, triggerWinStreak } = require('./missionService');
 const tokenService = require('./tokenService');
 
 // ─── Card Utilities ───────────────────────────────────────────────────────────
@@ -548,6 +549,14 @@ async function playGame(userId, gameId, body) {
     payoutCkc: payoutCkc.toFixed(0),
     outcome,
   });
+
+  // ─── Mission Triggers (best-effort) ─────────────────────────────────────────
+  const isWin = payoutCkc.greaterThan(new Prisma.Decimal(0));
+  Promise.all([
+    triggerRoundsPlayed(userId),
+    triggerWager(userId, stakeDecimal),
+    triggerWinStreak(userId, isWin),
+  ]).catch((err) => logger.warn('Mission trigger failed', { userId, error: err.message }));
 
   return {
     outcome,
