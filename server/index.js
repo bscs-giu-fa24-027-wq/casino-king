@@ -19,6 +19,7 @@ const referralRoutes = require('./routes/referral');
 const adminRoutes = require('./routes/admin');
 const kycRoutes = require('./routes/kyc');
 const missionRoutes = require('./routes/missions');
+const leaderboardRoutes = require('./routes/leaderboard');
 
 // ─── Middleware Imports ───────────────────────────────────────────────────────
 const errorHandler = require('./middleware/errorHandler');
@@ -84,6 +85,7 @@ app.use('/api/referrals', referralRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/kyc', kycRoutes);
 app.use('/api/missions', missionRoutes);
+app.use('/api/leaderboard', leaderboardRoutes);
 
 // ─── 404 Handler ──────────────────────────────────────────────────────────────
 app.use((_req, res) => {
@@ -96,6 +98,47 @@ app.use(errorHandler);
 // ─── Start Server ─────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   logger.info(`Casino King server running on port ${PORT}`, { env: process.env.NODE_ENV || 'development' });
+});
+
+// ─── Leaderboard Cron Jobs ────────────────────────────────────────────────────
+const cron = require('node-cron');
+const {
+  calculateRanks,
+  awardLeaderboardPrizes,
+  getWeekBounds,
+  getMonthBounds,
+} = require('./services/leaderboardService');
+
+// Recalculate ranks every hour for both periods.
+cron.schedule('0 * * * *', async () => {
+  try {
+    await calculateRanks('WEEKLY');
+    await calculateRanks('MONTHLY');
+    logger.info('Leaderboard ranks updated by hourly cron');
+  } catch (err) {
+    logger.error('Hourly leaderboard cron failed', { error: err.message });
+  }
+});
+
+// Check every minute whether the current week period has ended and prizes need awarding.
+// awardLeaderboardPrizes is idempotent (prizePaidAt guards double-award).
+cron.schedule('* * * * *', async () => {
+  try {
+    const now = new Date();
+    const weekBounds = getWeekBounds();
+    const monthBounds = getMonthBounds();
+
+    // Award weekly prizes the minute after the period ends (end < now).
+    if (weekBounds.end < now) {
+      await awardLeaderboardPrizes('WEEKLY', weekBounds);
+    }
+
+    if (monthBounds.end < now) {
+      await awardLeaderboardPrizes('MONTHLY', monthBounds);
+    }
+  } catch (err) {
+    logger.error('Period-end prize cron failed', { error: err.message });
+  }
 });
 
 module.exports = app;
