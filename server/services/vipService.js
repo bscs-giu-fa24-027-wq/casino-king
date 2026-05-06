@@ -2,6 +2,7 @@
 
 const prisma = require('../utils/prisma');
 const logger = require('../utils/logger');
+const { createNotification } = require('./notificationService');
 
 // ─── VIP Deposit Bonus Percentages ────────────────────────────────────────────
 // Applied on top of purchased CKC amount per VIP tier.

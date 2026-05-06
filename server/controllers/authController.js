@@ -6,6 +6,7 @@ const prisma = require('../utils/prisma');
 const { signToken } = require('../services/jwtService');
 const { checkDailyBonus } = require('../services/bonusService');
 const { claimReferral } = require('../services/referralService');
+const { createNotification } = require('../services/notificationService');
 const logger = require('../utils/logger');
 
 const SALT_ROUNDS = 12;
@@ -135,17 +136,19 @@ async function register(req, res, next) {
         await tx.userVip.create({ data: { userId: newUser.id, tierId: bronzeTier.id } });
       }
 
-      await tx.notification.create({
-        data: {
-          userId: newUser.id,
-          title: 'Welcome to Casino King!',
-          message: `Welcome, ${fullName}! Your account has been created successfully.`,
-          type: 'SYSTEM',
-        },
-      });
-
       return newUser;
     });
+
+    // Send welcome notification (best-effort, outside transaction)
+    try {
+      await createNotification(user.id, {
+        title: 'Welcome to Casino King!',
+        message: `Welcome, ${fullName}! Your account has been created successfully.`,
+        type: 'SYSTEM',
+      });
+    } catch (notifErr) {
+      logger.warn('Welcome notification failed', { userId: user.id, error: notifErr.message });
+    }
 
     const token = signToken(user);
     logger.info('User registered', { userId: user.id, email: user.email });
@@ -210,7 +213,14 @@ async function login(req, res, next) {
 
     // Award daily login bonus (best-effort)
     try {
-      await checkDailyBonus(user.id);
+      const bonusResult = await checkDailyBonus(user.id);
+      if (bonusResult) {
+        await createNotification(user.id, {
+          title: 'Daily Login Bonus!',
+          message: `You earned ${bonusResult.ckcAwarded} CKC for your day ${bonusResult.streakDays} login streak!`,
+          type: 'BONUS',
+        });
+      }
     } catch (bonusErr) {
       logger.warn('Daily bonus check failed', { userId: user.id, error: bonusErr.message });
     }
