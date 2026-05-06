@@ -75,7 +75,7 @@ async function getUserBonuses(userId) {
  */
 async function checkDailyBonus(userId) {
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  today.setUTCHours(0, 0, 0, 0);
 
   // Already claimed today?
   const existing = await prisma.dailyBonus.findFirst({
@@ -88,9 +88,9 @@ async function checkDailyBonus(userId) {
   let streakDay = 1;
   if (userVip?.lastLoginBonusAt) {
     const lastBonus = new Date(userVip.lastLoginBonusAt);
-    lastBonus.setHours(0, 0, 0, 0);
+    lastBonus.setUTCHours(0, 0, 0, 0);
     const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
     if (lastBonus.getTime() === yesterday.getTime()) {
       streakDay = (userVip.currentStreakDays || 0) + 1;
     }

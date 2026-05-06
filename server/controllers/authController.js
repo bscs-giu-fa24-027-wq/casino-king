@@ -1,12 +1,14 @@
 'use strict';
 
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const prisma = require('../utils/prisma');
 const { signToken } = require('../services/tokenService');
 const { checkDailyBonus } = require('../services/bonusService');
 const logger = require('../utils/logger');
 
 const SALT_ROUNDS = 12;
+const DEFAULT_LOGOUT_TTL_SECONDS = 3600;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -24,11 +26,11 @@ function isBlocked(countryCode) {
 
 function isAtLeast18(dob) {
   const now = new Date();
-  const birth = new Date(dob);
-  if (isNaN(birth.getTime())) return false;
-  let age = now.getFullYear() - birth.getFullYear();
-  const monthDiff = now.getMonth() - birth.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) {
+  const birthDate = new Date(dob);
+  if (isNaN(birthDate.getTime())) return false;
+  let age = now.getFullYear() - birthDate.getFullYear();
+  const monthDiff = now.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birthDate.getDate())) {
     age -= 1;
   }
   return age >= 18;
@@ -229,9 +231,8 @@ async function logout(req, res, next) {
     if (authHeader && authHeader.startsWith('Bearer ') && redisClient) {
       const token = authHeader.slice(7);
       try {
-        const jwt = require('jsonwebtoken');
         const decoded = jwt.decode(token);
-        const ttl = decoded?.exp ? decoded.exp - Math.floor(Date.now() / 1000) : 3600;
+        const ttl = decoded?.exp ? decoded.exp - Math.floor(Date.now() / 1000) : DEFAULT_LOGOUT_TTL_SECONDS;
         if (ttl > 0) {
           await redisClient.set(`blocklist:${token}`, '1', 'EX', ttl);
         }
