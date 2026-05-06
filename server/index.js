@@ -37,6 +37,10 @@ app.use(
 );
 
 // ─── Body Parsers ─────────────────────────────────────────────────────────────
+// Stripe webhook needs the raw body for signature verification.
+// Register express.raw() for that path before the global express.json() so the
+// Buffer is preserved; the route handler re-applies express.raw() as a guard.
+app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
