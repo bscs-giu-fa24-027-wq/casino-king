@@ -4,9 +4,8 @@ const prisma = require('../utils/prisma');
 const logger = require('../utils/logger');
 
 // ─── Daily bonus constants ────────────────────────────────────────────────────
-const BASE_DAILY_BONUS = 10;      // CKC awarded on day 1
-const STREAK_BONUS_PER_DAY = 5;   // additional CKC per consecutive day
-const MAX_DAILY_BONUS = 100;      // CKC cap per login day
+const BASE_DAILY_BONUS = 10;   // CKC per streak day (streak 1=10, 2=20, 3=30, 4=40, 5+=50)
+const MAX_STREAK_MULTIPLIER = 5; // cap streak multiplier at 5
 
 /**
  * Applies a bonus code to a user's wallet.
@@ -96,8 +95,9 @@ async function checkDailyBonus(userId) {
     }
   }
 
-  // BASE_DAILY_BONUS CKC + STREAK_BONUS_PER_DAY per extra streak day, capped at MAX_DAILY_BONUS
-  const ckcAwarded = Math.min(BASE_DAILY_BONUS + (streakDay - 1) * STREAK_BONUS_PER_DAY, MAX_DAILY_BONUS);
+  // baseCkc=10, multiplier=min(streakDay,5), ckcAwarded=baseCkc*multiplier
+  const multiplier = Math.min(streakDay, MAX_STREAK_MULTIPLIER);
+  const ckcAwarded = BASE_DAILY_BONUS * multiplier;
 
   const wallet = await prisma.wallet.findUnique({ where: { userId } });
   if (!wallet) return null;
@@ -132,7 +132,30 @@ async function checkDailyBonus(userId) {
   await prisma.$transaction(ops);
 
   logger.info('Daily login bonus awarded', { userId, ckcAwarded, streakDay });
-  return { ckcAwarded, streakDay };
+  return { ckcAwarded, streakDays: streakDay, multiplier };
 }
 
-module.exports = { redeemBonus, getUserBonuses, checkDailyBonus };
+/**
+ * Returns the current streak and today's bonus status for a user.
+ * @param {string} userId
+ * @returns {Promise<{ streakDays: number, claimedToday: boolean, ckcIfClaimed: number, multiplier: number }>}
+ */
+async function getStreakStatus(userId) {
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
+  const [claimed, userVip] = await Promise.all([
+    prisma.dailyBonus.findFirst({ where: { userId, claimedAt: { gte: today } } }),
+    prisma.userVip.findUnique({ where: { userId } }),
+  ]);
+
+  const streakDays = userVip?.currentStreakDays ?? 0;
+  const claimedToday = !!claimed;
+  const nextStreakDay = claimedToday ? streakDays : streakDays + 1;
+  const multiplier = Math.min(nextStreakDay, MAX_STREAK_MULTIPLIER);
+  const ckcIfClaimed = BASE_DAILY_BONUS * multiplier;
+
+  return { streakDays, claimedToday, ckcIfClaimed, multiplier };
+}
+
+module.exports = { redeemBonus, getUserBonuses, checkDailyBonus, getStreakStatus };

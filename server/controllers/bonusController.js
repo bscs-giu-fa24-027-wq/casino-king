@@ -1,6 +1,6 @@
 'use strict';
 
-const { redeemBonus, getUserBonuses } = require('../services/bonusService');
+const { redeemBonus, getUserBonuses, getStreakStatus } = require('../services/bonusService');
 
 /**
  * POST /api/bonuses/redeem
@@ -29,4 +29,16 @@ async function listMyBonuses(req, res, next) {
   }
 }
 
-module.exports = { redeem, listMyBonuses };
+/**
+ * GET /api/bonuses/streak
+ */
+async function streak(req, res, next) {
+  try {
+    const status = await getStreakStatus(req.user.id);
+    res.json(status);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { redeem, listMyBonuses, streak };

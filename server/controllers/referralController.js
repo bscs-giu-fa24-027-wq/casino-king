@@ -1,17 +1,32 @@
 'use strict';
 
-const { createReferral, getReferrals } = require('../services/referralService');
+const { generateReferralLink, claimReferral, getReferralStats, getReferrals } = require('../services/referralService');
 
 /**
- * POST /api/referrals
- * Body: { referredId }
+ * POST /api/referrals/generate
+ * Requires JWT. Returns { referralLink, totalReferrals, totalCkcEarned }.
  */
-async function refer(req, res, next) {
+async function generate(req, res, next) {
   try {
-    const { referredId } = req.body;
-    if (!referredId) return res.status(400).json({ error: 'referredId is required' });
+    const result = await generateReferralLink(req.user.id);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
 
-    const referral = await createReferral(req.user.id, referredId);
+/**
+ * POST /api/referrals/claim
+ * Called on register with ?ref=<referrerId>.
+ * Body: { referrerId, referredId }
+ */
+async function claim(req, res, next) {
+  try {
+    const { referrerId, referredId } = req.body;
+    if (!referrerId || !referredId) {
+      return res.status(400).json({ error: 'referrerId and referredId are required' });
+    }
+    const referral = await claimReferral(referrerId, referredId);
     res.status(201).json(referral);
   } catch (err) {
     next(err);
@@ -19,7 +34,35 @@ async function refer(req, res, next) {
 }
 
 /**
- * GET /api/referrals
+ * GET /api/referrals/stats
+ * Requires JWT. Returns { referrals, totalCkcEarned }.
+ */
+async function stats(req, res, next) {
+  try {
+    const result = await getReferralStats(req.user.id);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/referrals  (legacy — kept for backward compatibility)
+ * Body: { referredId }
+ */
+async function refer(req, res, next) {
+  try {
+    const { referredId } = req.body;
+    if (!referredId) return res.status(400).json({ error: 'referredId is required' });
+    const referral = await claimReferral(req.user.id, referredId);
+    res.status(201).json(referral);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET /api/referrals  (legacy — kept for backward compatibility)
  */
 async function listReferrals(req, res, next) {
   try {
@@ -30,4 +73,5 @@ async function listReferrals(req, res, next) {
   }
 }
 
-module.exports = { refer, listReferrals };
+module.exports = { generate, claim, stats, refer, listReferrals };
+

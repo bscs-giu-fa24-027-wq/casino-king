@@ -6,6 +6,8 @@ const prisma = require('../utils/prisma');
 const logger = require('../utils/logger');
 const tokenService = require('./tokenService');
 const { CKC_RATE } = require('../../shared/constants');
+const { creditReferrer } = require('./referralService');
+const { triggerDeposit } = require('./missionService');
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2024-04-10',
@@ -136,6 +138,20 @@ async function handleWebhook(rawBody, signature) {
 
     try {
       await tokenService.purchaseCkc(userId, packageId);
+
+      // Credit referrer on first purchase (best-effort)
+      try {
+        await creditReferrer(userId);
+      } catch (refErr) {
+        logger.warn('creditReferrer failed', { userId, error: refErr.message });
+      }
+
+      // Trigger deposit mission (best-effort)
+      try {
+        await triggerDeposit(userId);
+      } catch (missionErr) {
+        logger.warn('triggerDeposit failed', { userId, error: missionErr.message });
+      }
 
       await prisma.notification.create({
         data: {
