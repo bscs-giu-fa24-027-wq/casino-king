@@ -3,7 +3,7 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const prisma = require('../utils/prisma');
-const { signToken } = require('../services/tokenService');
+const { signToken } = require('../services/jwtService');
 const { checkDailyBonus } = require('../services/bonusService');
 const logger = require('../utils/logger');
 
