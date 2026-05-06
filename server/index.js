@@ -17,6 +17,7 @@ const paymentRoutes = require('./routes/payment');
 const bonusRoutes = require('./routes/bonus');
 const referralRoutes = require('./routes/referral');
 const adminRoutes = require('./routes/admin');
+const kycRoutes = require('./routes/kyc');
 
 // ─── Middleware Imports ───────────────────────────────────────────────────────
 const errorHandler = require('./middleware/errorHandler');
@@ -80,6 +81,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/bonuses', bonusRoutes);
 app.use('/api/referrals', referralRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/kyc', kycRoutes);
 
 // ─── 404 Handler ──────────────────────────────────────────────────────────────
 app.use((_req, res) => {
