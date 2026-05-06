@@ -78,7 +78,7 @@ function playSlots(stake) {
     multiplier = randInt(3, 5);
     outcome = `win_${multiplier}x`;
   } else {
-    multiplier = randInt(5, 10);
+    multiplier = randInt(6, 10);
     outcome = `win_${multiplier}x`;
   }
   const payoutCkc = stake.mul(new Prisma.Decimal(multiplier));
@@ -305,7 +305,7 @@ function playCrash(stake, body) {
   const { cashOutAt } = body;
   const cashOut = parseFloat(cashOutAt);
   if (!cashOutAt || isNaN(cashOut)) {
-    const err = new Error('cashOutAt is required for crash game');
+    const err = new Error('cashOutAt is required and must be a valid number for crash game');
     err.status = 400;
     throw err;
   }
@@ -370,10 +370,11 @@ function evaluatePoker(cards) {
   const suits = cards.map((c) => c.suit);
 
   const isFlush = suits.every((s) => s === suits[0]);
+  const isAceLowStraight = (vals) =>
+    vals[0] === 0 && vals[1] === 1 && vals[2] === 2 && vals[3] === 3 && vals[4] === 12;
   const isStraight =
     values.every((v, i) => i === 0 || v === values[i - 1] + 1) ||
-    // Ace-low straight: A-2-3-4-5 (values: 0,1,2,3,12)
-    (values[0] === 0 && values[1] === 1 && values[2] === 2 && values[3] === 3 && values[4] === 12);
+    isAceLowStraight(values);
 
   const counts = {};
   for (const v of values) counts[v] = (counts[v] || 0) + 1;
@@ -541,6 +542,7 @@ async function playGame(userId, gameId, body) {
   logger.info('Game played', {
     userId,
     gameId,
+    roundId: round.id,
     category: game.category,
     stakeCkc: stakeDecimal.toFixed(0),
     payoutCkc: payoutCkc.toFixed(0),
