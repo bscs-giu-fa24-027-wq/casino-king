@@ -411,27 +411,6 @@ function playPoker(stake) {
   };
 }
 
-// ─── Period Helpers ───────────────────────────────────────────────────────────
-
-function getWeekBounds() {
-  const now = new Date();
-  const day = now.getUTCDay();
-  const start = new Date(now);
-  start.setUTCHours(0, 0, 0, 0);
-  start.setUTCDate(now.getUTCDate() - day);
-  const end = new Date(start);
-  end.setUTCDate(start.getUTCDate() + 6);
-  end.setUTCHours(23, 59, 59, 999);
-  return { start, end };
-}
-
-function getMonthBounds() {
-  const now = new Date();
-  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999));
-  return { start, end };
-}
-
 // ─── Main Play Function ───────────────────────────────────────────────────────
 
 async function playGame(userId, gameId, body) {
