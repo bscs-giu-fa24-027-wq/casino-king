@@ -34,6 +34,9 @@ router.patch('/limits', authenticate, async (req, res, next) => {
 router.post('/cooling-off', authenticate, async (req, res, next) => {
   try {
     const hours = Number(req.body.hours);
+    if (isNaN(hours)) {
+      return res.status(400).json({ error: 'hours must be a number' });
+    }
     const updated = await rgService.setCoolingOff(req.user.id, hours);
     res.json({ settings: updated, message: `Cooling-off period set until ${updated.coolingOffUntil.toISOString()}` });
   } catch (err) {
@@ -47,6 +50,9 @@ router.post('/cooling-off', authenticate, async (req, res, next) => {
 router.post('/self-exclude', authenticate, async (req, res, next) => {
   try {
     const months = Number(req.body.months);
+    if (isNaN(months)) {
+      return res.status(400).json({ error: 'months must be a number' });
+    }
     const updated = await rgService.selfExclude(req.user.id, months);
     res.json({
       settings: updated,

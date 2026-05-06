@@ -202,8 +202,7 @@ async function selfExclude(userId, months) {
 
   await getOrCreateRgRecord(userId);
 
-  const selfExcludedUntil = new Date();
-  selfExcludedUntil.setUTCMonth(selfExcludedUntil.getUTCMonth() + months);
+  const selfExcludedUntil = new Date(Date.now() + months * 30 * 24 * 60 * 60 * 1000);
 
   // Atomically update RG record and suspend the user account
   const [updated] = await prisma.$transaction([
