@@ -301,7 +301,7 @@ async function creditWin(userId, ckcAmount, roundId) {
  */
 async function creditBonus(userId, ckcAmount, type) {
   if (type !== 'BONUS' && type !== 'REFERRAL') {
-    const err = new Error("type must be 'BONUS' or 'REFERRAL'");
+    const err = new Error('type must be BONUS or REFERRAL');
     err.status = 400;
     throw err;
   }
@@ -367,11 +367,14 @@ async function getTransactionHistory(userId, { limit = 20, offset = 0, type } = 
     where.type = type;
   }
 
+  const parsedLimit = Math.max(1, parseInt(limit, 10) || 20);
+  const parsedOffset = Math.max(0, parseInt(offset, 10) || 0);
+
   return prisma.transaction.findMany({
     where,
     orderBy: { createdAt: 'desc' },
-    skip: Number(offset),
-    take: Number(limit),
+    skip: parsedOffset,
+    take: parsedLimit,
   });
 }
 
