@@ -510,7 +510,7 @@ async function playGame(userId, gameId, body) {
   });
 
   // 8a. Check for VIP tier upgrade (best-effort, non-blocking)
-  vipService.checkVipUpgrade(userId).catch((err) =>
+  void vipService.checkVipUpgrade(userId).catch((err) =>
     logger.warn('VIP upgrade check failed', { userId, error: err.message })
   );
 

@@ -67,11 +67,11 @@ async function getVipStatus(userId) {
     const currentMin = Number(userVip.tier.minWager);
     const nextMin = Number(nextTier.minWager);
     const range = nextMin - currentMin;
-    const earned = userVip.totalWagered - currentMin;
+    const earned = Number(userVip.totalWagered) - currentMin;
     progressPct = range > 0
       ? Math.min(100, Math.max(0, Math.round((earned / range) * 100)))
       : 100;
-    ckcToNextTier = Math.max(0, nextMin - userVip.totalWagered);
+    ckcToNextTier = Math.max(0, nextMin - Number(userVip.totalWagered));
   }
 
   return {
@@ -107,7 +107,7 @@ async function checkVipUpgrade(userId) {
   if (!userVip) return null;
 
   const allTiers = await getAllTiers();
-  const totalWagered = userVip.totalWagered;
+  const totalWagered = Number(userVip.totalWagered);
 
   // Find the highest tier where minWager <= totalWagered
   let bestTier = null;
