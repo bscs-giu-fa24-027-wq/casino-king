@@ -8,6 +8,7 @@ const { triggerRoundsPlayed, triggerWager, triggerWinStreak } = require('./missi
 const tokenService = require('./tokenService');
 const { updateLeaderboard } = require('./leaderboardService');
 const vipService = require('./vipService');
+const rgService = require('./responsibleGamblingService');
 
 // ─── Card Utilities ───────────────────────────────────────────────────────────
 
@@ -432,6 +433,9 @@ async function playGame(userId, gameId, body) {
       throw err;
     }
   }
+
+  // 1b. Responsible gambling: cooling-off / self-exclusion
+  await rgService.assertNotRestricted(userId, { action: 'play games' });
 
   // 2. Validate stake
   const { stakeCkc, clientSeed } = body;
