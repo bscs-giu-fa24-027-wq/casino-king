@@ -29,8 +29,6 @@ async function listMyBonuses(req, res, next) {
   }
 }
 
-module.exports = { redeem, listMyBonuses, streak };
-
 /**
  * GET /api/bonuses/streak
  */
@@ -42,3 +40,5 @@ async function streak(req, res, next) {
     next(err);
   }
 }
+
+module.exports = { redeem, listMyBonuses, streak };

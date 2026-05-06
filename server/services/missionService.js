@@ -178,7 +178,7 @@ async function triggerRoundsPlayed(userId) {
       });
 
       if (completed) {
-        try { await tokenService.creditBonus(userId, m.rewardCkc, 'BONUS'); } catch (_) { /* best-effort */ }
+        try { await tokenService.creditBonus(userId, m.rewardCkc, 'BONUS'); } catch (err) { logger.warn('creditBonus failed (triggerRoundsPlayed)', { userId, missionId: m.id, error: err.message }); }
         try {
           await prisma.notification.create({
             data: {
@@ -188,7 +188,7 @@ async function triggerRoundsPlayed(userId) {
               type: 'BONUS',
             },
           });
-        } catch (_) { /* best-effort */ }
+        } catch (err) { logger.warn('notification failed (triggerRoundsPlayed)', { userId, missionId: m.id, error: err.message }); }
         logger.info('Mission completed via triggerRoundsPlayed', { userId, missionId: m.id });
       }
     }
@@ -240,7 +240,7 @@ async function triggerWager(userId, stakeCkc) {
     });
 
     if (completed) {
-      try { await tokenService.creditBonus(userId, m.rewardCkc, 'BONUS'); } catch (_) { /* best-effort */ }
+      try { await tokenService.creditBonus(userId, m.rewardCkc, 'BONUS'); } catch (err) { logger.warn('creditBonus failed (triggerWager)', { userId, missionId: m.id, error: err.message }); }
       try {
         await prisma.notification.create({
           data: {
@@ -250,7 +250,7 @@ async function triggerWager(userId, stakeCkc) {
             type: 'BONUS',
           },
         });
-      } catch (_) { /* best-effort */ }
+      } catch (err) { logger.warn('notification failed (triggerWager)', { userId, missionId: m.id, error: err.message }); }
       logger.info('Mission completed via triggerWager', { userId, missionId: m.id });
     }
   }
@@ -295,7 +295,7 @@ async function triggerWinStreak(userId, isWin) {
     });
 
     if (completed) {
-      try { await tokenService.creditBonus(userId, m.rewardCkc, 'BONUS'); } catch (_) { /* best-effort */ }
+      try { await tokenService.creditBonus(userId, m.rewardCkc, 'BONUS'); } catch (err) { logger.warn('creditBonus failed (triggerWinStreak)', { userId, missionId: m.id, error: err.message }); }
       try {
         await prisma.notification.create({
           data: {
@@ -305,7 +305,7 @@ async function triggerWinStreak(userId, isWin) {
             type: 'BONUS',
           },
         });
-      } catch (_) { /* best-effort */ }
+      } catch (err) { logger.warn('notification failed (triggerWinStreak)', { userId, missionId: m.id, error: err.message }); }
       logger.info('Mission completed via triggerWinStreak', { userId, missionId: m.id });
     }
   }
@@ -349,7 +349,7 @@ async function triggerDeposit(userId) {
     });
 
     if (completed) {
-      try { await tokenService.creditBonus(userId, m.rewardCkc, 'BONUS'); } catch (_) { /* best-effort */ }
+      try { await tokenService.creditBonus(userId, m.rewardCkc, 'BONUS'); } catch (err) { logger.warn('creditBonus failed (triggerDeposit)', { userId, missionId: m.id, error: err.message }); }
       try {
         await prisma.notification.create({
           data: {
@@ -359,7 +359,7 @@ async function triggerDeposit(userId) {
             type: 'BONUS',
           },
         });
-      } catch (_) { /* best-effort */ }
+      } catch (err) { logger.warn('notification failed (triggerDeposit)', { userId, missionId: m.id, error: err.message }); }
       logger.info('Mission completed via triggerDeposit', { userId, missionId: m.id });
     }
   }

@@ -82,7 +82,7 @@ async function creditReferrer(referredId) {
     data: {
       userId: referral.referrerId,
       title: 'Referral reward!',
-      message: `You earned ${REFERRAL_REWARD_CKC} CKC for referring a new player who made their first deposit!`,
+      message: `You earned ${REFERRAL_REWARD_CKC} CKC for referring a new player who made their first purchase!`,
       type: 'BONUS',
     },
   });
