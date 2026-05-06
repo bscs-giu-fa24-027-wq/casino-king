@@ -4,6 +4,7 @@ const { Prisma } = require('@prisma/client');
 const prisma = require('../utils/prisma');
 const logger = require('../utils/logger');
 const { CKC_RATE } = require('../../shared/constants');
+const vipService = require('./vipService');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -81,6 +82,13 @@ async function purchaseCkc(userId, packageId) {
   });
   const isFirstDeposit = priorPurchaseCount === 0;
 
+  // ── VIP deposit bonus ─────────────────────────────────────────────────────
+  // Bronze: +0%, Silver: +10%, Gold: +25%, Platinum: +50%, Diamond: +100%
+  const vipBonusPct = await vipService.getDepositBonusPct(userId);
+  const vipBonusCkc = vipBonusPct > 0
+    ? totalCkc.mul(new Prisma.Decimal(vipBonusPct)).div(new Prisma.Decimal(100)).round()
+    : new Prisma.Decimal(0);
+
   const bonusCkc = isFirstDeposit
     ? usdPrice.mul(new Prisma.Decimal(CKC_RATE))
     : new Prisma.Decimal(0);
@@ -133,6 +141,25 @@ async function purchaseCkc(userId, packageId) {
       });
     }
 
+    // ── VIP deposit bonus ──────────────────────────────────────────────────
+    if (vipBonusCkc.greaterThan(new Prisma.Decimal(0))) {
+      await tx.wallet.update({
+        where: { userId },
+        data: { ckcBalance: { increment: vipBonusCkc } },
+      });
+
+      await tx.transaction.create({
+        data: {
+          userId,
+          walletId: currentWallet.id,
+          type: 'BONUS',
+          status: 'COMPLETED',
+          ckcAmount: vipBonusCkc,
+          reference: `VIP_DEPOSIT_BONUS_${vipBonusPct}PCT`,
+        },
+      });
+    }
+
     // Re-fetch final wallet state
     const finalWallet = await tx.wallet.findUnique({ where: { userId } });
     return { wallet: finalWallet, purchaseTx };
@@ -145,9 +172,11 @@ async function purchaseCkc(userId, packageId) {
     usdPrice: usdPrice.toFixed(2),
     isFirstDeposit,
     bonusCkc: bonusCkc.toFixed(0),
+    vipBonusCkc: vipBonusCkc.toFixed(0),
+    vipBonusPct,
   });
 
-  return { wallet, transaction: purchaseTx, bonusCkc };
+  return { wallet, transaction: purchaseTx, bonusCkc, vipBonusCkc };
 }
 
 /**
