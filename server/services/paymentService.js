@@ -17,7 +17,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
 const MIN_DEALER_BULK_PURCHASE_USD = 500;
 // Dealer wholesale benefit = 20% more CKC than retail USD->CKC conversion.
 const DEALER_WHOLESALE_MULTIPLIER = 1.2;
-const REQUIRED_TERMS_VERSION = '1.0';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -60,25 +59,6 @@ async function _checkRgLimits(userId, usdPrice) {
   }
 }
 
-async function _assertTermsAcceptedForFirstDeposit(userId) {
-  const priorPurchaseCount = await prisma.transaction.count({
-    where: { userId, type: 'PURCHASE', status: 'COMPLETED' },
-  });
-
-  if (priorPurchaseCount > 0) return;
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { termsAcceptedVersion: true, termsAcceptedAt: true },
-  });
-
-  if (!user || user.termsAcceptedVersion !== REQUIRED_TERMS_VERSION || !user.termsAcceptedAt) {
-    const err = new Error('You must accept Terms & Conditions before your first deposit');
-    err.status = 403;
-    throw err;
-  }
-}
-
 // ─── Exported functions ───────────────────────────────────────────────────────
 
 /**
@@ -99,7 +79,7 @@ async function createCheckout(userId, packageId) {
   const usdPrice = new Prisma.Decimal(pkg.usdPrice);
 
   await _checkRgLimits(userId, usdPrice);
-  await _assertTermsAcceptedForFirstDeposit(userId);
+  await tokenService.assertTermsAcceptedForFirstDeposit(userId);
 
   const amountCents = Math.round(usdPrice.toNumber() * 100);
 

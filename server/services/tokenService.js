@@ -459,6 +459,7 @@ async function getTransactionHistory(userId, { limit = 20, offset = 0, type } = 
 }
 
 module.exports = {
+  assertTermsAcceptedForFirstDeposit,
   purchaseCkc,
   redeemCkc,
   stakeCkc,
