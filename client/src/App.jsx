@@ -38,7 +38,14 @@ function App() {
         <Route path="/" element={<LobbyPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/games/:id" element={<GamePage />} />
+        <Route
+          path="/games/:id"
+          element={(
+            <PrivateRoute>
+              <GamePage />
+            </PrivateRoute>
+          )}
+        />
         <Route path="/shop" element={<CoinShopPage />} />
         <Route path="/leaderboard" element={<LeaderboardPage />} />
         <Route path="/vip" element={<VipPage />} />
