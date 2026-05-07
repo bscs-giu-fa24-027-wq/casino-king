@@ -13,6 +13,10 @@ const { createNotification } = require('./notificationService');
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2024-04-10',
 });
+// Dealers can only use wholesale checkout for bulk orders at/above this USD threshold.
+const MIN_DEALER_BULK_PURCHASE_USD = 500;
+// Dealer wholesale benefit = 20% more CKC than retail USD->CKC conversion.
+const DEALER_WHOLESALE_MULTIPLIER = 1.2;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -104,6 +108,114 @@ async function createCheckout(userId, packageId) {
 }
 
 /**
+ * Creates a Stripe Checkout Session for dealer bulk CKC purchases.
+ *
+ * @param {string} userId
+ * @param {number|string} usdAmount
+ * @returns {Promise<{ checkoutUrl: string, sessionId: string, wholesaleCkc: string }>}
+ */
+async function createDealerBulkCheckout(userId, usdAmount) {
+  const dealer = await prisma.dealer.findUnique({
+    where: { userId },
+    select: { status: true },
+  });
+
+  if (!dealer || dealer.status !== 'ACTIVE') {
+    const err = new Error('Dealer account is not active');
+    err.status = 403;
+    throw err;
+  }
+
+  const parsedUsd = new Prisma.Decimal(usdAmount);
+  if (parsedUsd.lessThan(new Prisma.Decimal(MIN_DEALER_BULK_PURCHASE_USD))) {
+    const err = new Error(`Minimum bulk purchase amount is $${MIN_DEALER_BULK_PURCHASE_USD}`);
+    err.status = 400;
+    throw err;
+  }
+
+  await _checkRgLimits(userId, parsedUsd);
+
+  const wholesaleCkc = parsedUsd
+    .mul(new Prisma.Decimal(CKC_RATE))
+    .mul(new Prisma.Decimal(DEALER_WHOLESALE_MULTIPLIER))
+    .round();
+
+  const amountCents = Math.round(parsedUsd.toNumber() * 100);
+
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ['card'],
+    mode: 'payment',
+    line_items: [
+      {
+        price_data: {
+          currency: 'usd',
+          unit_amount: amountCents,
+          product_data: { name: 'Dealer Bulk CKC Purchase' },
+        },
+        quantity: 1,
+      },
+    ],
+    metadata: {
+      userId,
+      dealerBulkPurchase: 'true',
+      usdAmount: parsedUsd.toFixed(2),
+      wholesaleCkc: wholesaleCkc.toFixed(0),
+    },
+    success_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/dealer?payment=success`,
+    cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/dealer?payment=cancelled`,
+  });
+
+  logger.info('Dealer bulk Stripe checkout session created', { userId, sessionId: session.id });
+
+  return { checkoutUrl: session.url, sessionId: session.id, wholesaleCkc: wholesaleCkc.toFixed(0) };
+}
+
+async function creditDealerBulkPurchase(userId, usdAmount, wholesaleCkc, sessionId) {
+  const usd = new Prisma.Decimal(usdAmount);
+  const ckc = new Prisma.Decimal(wholesaleCkc);
+  const reference = `DEALER_BULK:${sessionId}`;
+
+  await prisma.$transaction(async (tx) => {
+    const dealer = await tx.dealer.findUnique({ where: { userId } });
+    if (!dealer || dealer.status !== 'ACTIVE') {
+      const err = new Error('Dealer account is not active');
+      err.status = 403;
+      throw err;
+    }
+
+    const wallet = await tx.wallet.findUnique({ where: { userId } });
+    if (!wallet) {
+      const err = new Error('Wallet not found');
+      err.status = 404;
+      throw err;
+    }
+
+    const existing = await tx.transaction.findFirst({ where: { reference } });
+    if (existing) return;
+
+    await tx.wallet.update({
+      where: { userId },
+      data: {
+        ckcBalance: { increment: ckc },
+        lifetimeDeposited: { increment: usd },
+      },
+    });
+
+    await tx.transaction.create({
+      data: {
+        userId,
+        walletId: wallet.id,
+        type: 'PURCHASE',
+        status: 'COMPLETED',
+        ckcAmount: ckc,
+        usdAmount: usd,
+        reference,
+      },
+    });
+  });
+}
+
+/**
  * Handles a Stripe webhook event.
  * Verifies the Stripe-Signature header and dispatches to event handlers.
  *
@@ -131,6 +243,33 @@ async function handleWebhook(rawBody, signature) {
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
     const { userId, packageId } = session.metadata || {};
+
+    if (session.metadata && session.metadata.dealerBulkPurchase === 'true') {
+      if (!userId) {
+        logger.warn('Dealer bulk checkout missing userId metadata', { sessionId: session.id });
+        return;
+      }
+
+      try {
+        const usdAmount = session.metadata.usdAmount;
+        const wholesaleCkc = session.metadata.wholesaleCkc;
+        await creditDealerBulkPurchase(userId, usdAmount, wholesaleCkc, session.id);
+        await createNotification(userId, {
+          title: 'Dealer bulk purchase successful',
+          message: `Your dealer wallet was credited with ${wholesaleCkc} CKC.`,
+          type: 'SYSTEM',
+        });
+        logger.info('Dealer bulk checkout handled', { userId, sessionId: session.id });
+      } catch (err) {
+        logger.error('Error handling dealer bulk checkout', {
+          userId,
+          sessionId: session.id,
+          error: err.message,
+        });
+        throw err;
+      }
+      return;
+    }
 
     if (!userId || !packageId) {
       logger.warn('checkout.session.completed missing metadata', { sessionId: session.id });
@@ -304,4 +443,4 @@ async function getPaymentHistory(userId, { limit = 20, offset = 0 } = {}) {
   return { transactions, total };
 }
 
-module.exports = { createCheckout, handleWebhook, cashout, getPaymentHistory };
+module.exports = { createCheckout, createDealerBulkCheckout, handleWebhook, cashout, getPaymentHistory };
