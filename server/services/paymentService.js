@@ -13,6 +13,10 @@ const { createNotification } = require('./notificationService');
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2024-04-10',
 });
+// Dealers can only use wholesale checkout for bulk orders at/above this USD threshold.
+const MIN_DEALER_BULK_PURCHASE_USD = 500;
+// Dealer wholesale benefit = 20% more CKC than retail USD->CKC conversion.
+const DEALER_WHOLESALE_MULTIPLIER = 1.2;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -123,8 +127,8 @@ async function createDealerBulkCheckout(userId, usdAmount) {
   }
 
   const parsedUsd = new Prisma.Decimal(usdAmount);
-  if (parsedUsd.lessThan(new Prisma.Decimal(500))) {
-    const err = new Error('Minimum bulk purchase amount is $500');
+  if (parsedUsd.lessThan(new Prisma.Decimal(MIN_DEALER_BULK_PURCHASE_USD))) {
+    const err = new Error(`Minimum bulk purchase amount is $${MIN_DEALER_BULK_PURCHASE_USD}`);
     err.status = 400;
     throw err;
   }
@@ -133,7 +137,7 @@ async function createDealerBulkCheckout(userId, usdAmount) {
 
   const wholesaleCkc = parsedUsd
     .mul(new Prisma.Decimal(CKC_RATE))
-    .mul(new Prisma.Decimal(1.2))
+    .mul(new Prisma.Decimal(DEALER_WHOLESALE_MULTIPLIER))
     .round();
 
   const amountCents = Math.round(parsedUsd.toNumber() * 100);

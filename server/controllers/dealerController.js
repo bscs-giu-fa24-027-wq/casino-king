@@ -6,12 +6,18 @@ const { createNotification } = require('../services/notificationService');
 const { createDealerBulkCheckout } = require('../services/paymentService');
 
 const ADMIN_DEALER_STATUS_MAP = {
+  // API accepts APPROVED as an action label; persisted dealer status is ACTIVE.
+  // SUSPENDED/BANNED map directly because API and DB status names are the same.
   APPROVED: 'ACTIVE',
   SUSPENDED: 'SUSPENDED',
   BANNED: 'BANNED',
 };
+// Use runtime ISO list when available; otherwise fallback keeps 2-letter format validation.
+const ISO_COUNTRY_CODES = typeof Intl.supportedValuesOf === 'function'
+  ? new Set(Intl.supportedValuesOf('region'))
+  : null;
 
-function monthKey(date) {
+function formatYearMonth(date) {
   return date.toISOString().slice(0, 7);
 }
 
@@ -25,6 +31,13 @@ async function applyDealer(req, res, next) {
     if (!companyName || !businessRegNumber || !country) {
       return res.status(400).json({ error: 'companyName, businessRegNumber, and country are required' });
     }
+    const normalizedCountry = country.toUpperCase();
+    if (
+      !/^[A-Za-z]{2}$/.test(normalizedCountry) ||
+      (ISO_COUNTRY_CODES && !ISO_COUNTRY_CODES.has(normalizedCountry))
+    ) {
+      return res.status(400).json({ error: 'country must be a 2-letter ISO country code' });
+    }
 
     const existing = await prisma.dealer.findUnique({ where: { userId: req.user.id } });
     if (existing) {
@@ -36,7 +49,7 @@ async function applyDealer(req, res, next) {
         userId: req.user.id,
         companyName,
         businessRegNumber,
-        country: country.toUpperCase(),
+        country: normalizedCountry,
         status: 'PENDING',
       },
     });
@@ -234,7 +247,7 @@ async function getDealerRevenue(req, res, next) {
 
     const monthlyMap = new Map();
     for (const tx of referredPurchases) {
-      const key = monthKey(tx.createdAt);
+      const key = formatYearMonth(tx.createdAt);
       const prev = monthlyMap.get(key) || new Prisma.Decimal(0);
       monthlyMap.set(key, prev.add(tx.usdAmount || new Prisma.Decimal(0)));
     }
@@ -271,7 +284,10 @@ async function getDealerRevenue(req, res, next) {
 
 async function updateDealerStatus(req, res, next) {
   try {
-    const targetStatus = ADMIN_DEALER_STATUS_MAP[req.body.status];
+    const requestedStatus = typeof req.body.status === 'string'
+      ? req.body.status.trim().toUpperCase()
+      : '';
+    const targetStatus = ADMIN_DEALER_STATUS_MAP[requestedStatus];
     if (!targetStatus) {
       return res.status(400).json({ error: 'status must be one of APPROVED, SUSPENDED, BANNED' });
     }
@@ -344,40 +360,56 @@ async function listDealers(req, res, next) {
       },
     });
 
-    const withStats = await Promise.all(
-      dealers.map(async (dealer) => {
-        const referrals = await prisma.referral.findMany({
-          where: { referrerId: dealer.userId },
-          select: { referredId: true },
-        });
+    const dealerUserIds = dealers.map((dealer) => dealer.userId);
+    const referrals = dealerUserIds.length > 0
+      ? await prisma.referral.findMany({
+          where: { referrerId: { in: dealerUserIds } },
+          select: { referrerId: true, referredId: true },
+        })
+      : [];
 
-        const referredIds = referrals.map((r) => r.referredId);
-        const agg = referredIds.length > 0
-          ? await prisma.transaction.aggregate({
-              where: {
-                userId: { in: referredIds },
-                type: 'PURCHASE',
-                status: 'COMPLETED',
-              },
-              _sum: { usdAmount: true },
-            })
-          : { _sum: { usdAmount: new Prisma.Decimal(0) } };
+    const referredIdsByDealer = new Map();
+    for (const referral of referrals) {
+      const current = referredIdsByDealer.get(referral.referrerId) || [];
+      current.push(referral.referredId);
+      referredIdsByDealer.set(referral.referrerId, current);
+    }
 
-        const referredRevenue = agg._sum.usdAmount || new Prisma.Decimal(0);
-        const commissionEarned = referredRevenue
-          .mul(new Prisma.Decimal(dealer.commissionPct))
-          .div(new Prisma.Decimal(100));
-
-        return {
-          ...dealer,
-          stats: {
-            totalPlayersReferred: referrals.length,
-            referredRevenue,
-            commissionEarned,
+    const allReferredIds = Array.from(new Set(referrals.map((item) => item.referredId)));
+    const purchaseByUser = allReferredIds.length > 0
+      ? await prisma.transaction.groupBy({
+          by: ['userId'],
+          where: {
+            userId: { in: allReferredIds },
+            type: 'PURCHASE',
+            status: 'COMPLETED',
           },
-        };
-      })
+          _sum: { usdAmount: true },
+        })
+      : [];
+    const revenueByUserId = new Map(
+      purchaseByUser.map((item) => [item.userId, item._sum.usdAmount || new Prisma.Decimal(0)])
     );
+
+    const withStats = dealers.map((dealer) => {
+      const referredIds = referredIdsByDealer.get(dealer.userId) || [];
+      const referredRevenue = referredIds.reduce(
+        (sum, referredId) => sum.add(revenueByUserId.get(referredId) || new Prisma.Decimal(0)),
+        new Prisma.Decimal(0)
+      );
+      const commissionEarned = referredRevenue
+        .mul(new Prisma.Decimal(dealer.commissionPct))
+        .div(new Prisma.Decimal(100));
+
+      return {
+        ...dealer,
+        stats: {
+          totalPlayersReferred: referredIds.length,
+          referredRevenue,
+          commissionEarned,
+        },
+      };
+    });
 
     res.json({ dealers: withStats });
   } catch (err) {
