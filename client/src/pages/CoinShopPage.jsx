@@ -44,7 +44,7 @@ export default function CoinShopPage() {
     };
   }, [token]);
 
-  const isNewUser = Number(wallet?.lifetimeDeposited || 0) <= 0;
+  const isNewUser = Number(wallet?.lifetimeDeposited || 0) === 0;
 
   const onBuy = async (pkg) => {
     if (!token || buying) {

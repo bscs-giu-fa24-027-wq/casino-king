@@ -13,6 +13,8 @@ const KYC_BADGE = {
   PENDING: 'bg-gray-500/20 text-gray-300',
 };
 
+const formatNumber = (value) => Number(value || 0).toLocaleString();
+
 export default function ProfilePage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -183,7 +185,7 @@ export default function ProfilePage() {
               </div>
               <p className="mt-2 text-xs text-gray-400">
                 {vipStatus.nextTier
-                  ? `${vipStatus.ckcToNextTier} CKC to ${vipStatus.nextTier.name}`
+                  ? `${formatNumber(vipStatus.ckcToNextTier)} CKC to ${vipStatus.nextTier.name}`
                   : 'Top VIP tier reached'}
               </p>
             </>
@@ -209,7 +211,7 @@ export default function ProfilePage() {
             </button>
           </div>
           <div className="mt-3 text-sm text-gray-300">
-            <p>Referrals: {referralStats?.referrals?.length || 0}</p>
+            <p>Total referrals: {referralStats?.referrals?.length || 0}</p>
             <p>CKC earned: {referralStats?.totalCkcEarned || 0}</p>
           </div>
         </div>

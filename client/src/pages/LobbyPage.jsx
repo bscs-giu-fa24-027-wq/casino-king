@@ -12,6 +12,7 @@ const toNumber = (value, fallback = 0) => {
 const formatCkc = (value) => `${toNumber(value).toFixed(2)} CKC`;
 
 const getErrorMessage = (err, fallback) => err?.response?.data?.message || err?.response?.data?.error || fallback;
+const DEFAULT_GAME_ROUTE = '/games/slots';
 
 function CardSkeleton({ className = '' }) {
   return <div className={`animate-pulse rounded-xl border border-gray-800 bg-gray-900 ${className}`} />;
@@ -157,10 +158,14 @@ export default function LobbyPage() {
         ) : (
           <div className="grid gap-3 md:grid-cols-3">
             {games.map((game) => (
-              <Link key={game.id} to={`/games/${String(game.category || '').toLowerCase()}`} className="rounded-xl border border-gray-800 bg-gray-950 p-4 transition hover:border-yellow-500/40">
+              <Link
+                key={game.id}
+                to={game.category ? `/games/${String(game.category).toLowerCase()}` : DEFAULT_GAME_ROUTE}
+                className="rounded-xl border border-gray-800 bg-gray-950 p-4 transition hover:border-yellow-500/40"
+              >
                 <p className="text-sm text-yellow-300">{game.category}</p>
                 <h3 className="mt-1 text-lg font-semibold text-white">{game.name}</h3>
-                <p className="mt-2 text-xs text-gray-400">Stake: {game.minStake} - {game.maxStake} CKC</p>
+                <p className="mt-2 text-xs text-gray-400">Stake: {formatCkc(game.minStake)} - {formatCkc(game.maxStake)}</p>
               </Link>
             ))}
           </div>
@@ -197,7 +202,7 @@ export default function LobbyPage() {
           ) : (
             <div className="mt-3 space-y-2">
               {leaderboard.map((entry, idx) => (
-                <div key={`${entry.username}-${idx}`} className="flex items-center justify-between rounded-lg border border-gray-800 bg-gray-950 px-3 py-2">
+                <div key={`${entry.rank || idx + 1}-${entry.username}`} className="flex items-center justify-between rounded-lg border border-gray-800 bg-gray-950 px-3 py-2">
                   <p className="text-sm text-gray-200">#{entry.rank || idx + 1} {entry.username}</p>
                   <p className="text-sm font-medium text-yellow-300">{formatCkc(entry.totalWagered)}</p>
                 </div>

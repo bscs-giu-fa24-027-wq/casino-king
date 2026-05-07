@@ -15,6 +15,14 @@ const toNumber = (value, fallback = 0) => {
 
 const formatCkc = (value) => `${toNumber(value).toFixed(2)} CKC`;
 const formatUsd = (value) => `$${toNumber(value).toFixed(2)}`;
+const ckcToUsd = (ckcAmount) => toNumber(ckcAmount) / CKC_PER_USD;
+const formatDateTime = (value) => new Date(value).toLocaleString('en-US', {
+  year: 'numeric',
+  month: 'short',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+});
 
 const TYPE_BADGE = {
   PURCHASE: 'bg-emerald-500/20 text-emerald-300',
@@ -36,21 +44,18 @@ export default function WalletPage() {
   const { wallet, refreshWallet } = useAuth();
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState([]);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [cashoutAmount, setCashoutAmount] = useState('100');
   const [submittingCashout, setSubmittingCashout] = useState(false);
 
-  const fetchTransactions = useCallback(async (nextPage = 1) => {
+  const fetchTransactions = useCallback(async () => {
     setLoading(true);
     try {
       const { data } = await api.get('/wallet/transactions', {
-        params: { page: nextPage, limit: PAGE_SIZE },
+        params: { page: 1, limit: 100 },
       });
       setTransactions(data?.transactions || []);
-      setTotal(Number(data?.total || 0));
-      setPage(Number(data?.page || nextPage));
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to load wallet transactions'));
     } finally {
@@ -60,19 +65,30 @@ export default function WalletPage() {
 
   useEffect(() => {
     refreshWallet();
-    fetchTransactions(1);
+    fetchTransactions();
   }, [fetchTransactions, refreshWallet]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [typeFilter]);
 
   const filteredTransactions = useMemo(() => {
     if (typeFilter === 'ALL') return transactions;
     return transactions.filter((tx) => tx.type === typeFilter);
   }, [transactions, typeFilter]);
 
-  const totalPages = useMemo(() => Math.max(1, Math.ceil(total / PAGE_SIZE)), [total]);
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(filteredTransactions.length / PAGE_SIZE)),
+    [filteredTransactions.length]
+  );
+  const paginatedTransactions = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filteredTransactions.slice(start, start + PAGE_SIZE);
+  }, [filteredTransactions, page]);
 
   const ckcBalance = toNumber(wallet?.ckcBalance);
-  const usdEquivalent = ckcBalance / CKC_PER_USD;
-  const estimatedUsdPayout = toNumber(cashoutAmount) / CKC_PER_USD;
+  const usdEquivalent = ckcToUsd(ckcBalance);
+  const estimatedUsdPayout = ckcToUsd(cashoutAmount);
 
   const onCashout = async (event) => {
     event.preventDefault();
@@ -89,7 +105,7 @@ export default function WalletPage() {
       toast.success(`Cashout requested (${formatUsd(data?.usdAmount ?? estimatedUsdPayout)})`);
       setCashoutAmount('100');
       await refreshWallet();
-      await fetchTransactions(page);
+      await fetchTransactions();
     } catch (err) {
       toast.error(getErrorMessage(err, 'Cashout failed'));
     } finally {
@@ -169,11 +185,11 @@ export default function WalletPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredTransactions.map((tx) => {
-                  const usd = tx.usdAmount ?? toNumber(tx.ckcAmount) / CKC_PER_USD;
+                {paginatedTransactions.map((tx) => {
+                  const usd = tx.usdAmount ?? ckcToUsd(tx.ckcAmount);
                   return (
                     <tr key={tx.id} className="border-b border-gray-900">
-                      <td className="px-2 py-2 text-gray-300">{new Date(tx.createdAt).toLocaleString()}</td>
+                      <td className="px-2 py-2 text-gray-300">{formatDateTime(tx.createdAt)}</td>
                       <td className="px-2 py-2">
                         <span className={`rounded-full px-2 py-1 text-xs font-semibold ${TYPE_BADGE[tx.type] || 'bg-gray-500/20 text-gray-300'}`}>
                           {tx.type}
@@ -196,7 +212,7 @@ export default function WalletPage() {
         <div className="mt-4 flex items-center justify-end gap-2">
           <button
             type="button"
-            onClick={() => fetchTransactions(Math.max(1, page - 1))}
+            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
             disabled={page <= 1 || loading}
             className="rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -205,7 +221,7 @@ export default function WalletPage() {
           <span className="text-xs text-gray-400">Page {page} / {totalPages}</span>
           <button
             type="button"
-            onClick={() => fetchTransactions(Math.min(totalPages, page + 1))}
+            onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
             disabled={page >= totalPages || loading}
             className="rounded-lg border border-gray-700 px-3 py-1.5 text-sm text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
