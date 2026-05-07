@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { formatCkc, getErrorMessage, playGameRound, toNumber } from './gameApi';
 
 const symbols = ['7️⃣', '🍒', '🔔', '🟥', '⭐', '🍋'];
+const SPIN_ANIMATION_INTERVAL = 100;
 
 function randomGrid() {
   return Array.from({ length: 3 }, () => Array.from({ length: 3 }, () => symbols[Math.floor(Math.random() * symbols.length)]));
@@ -25,11 +26,13 @@ export default function SlotsGame({ game, balance, onRoundComplete }) {
     return [1];
   }, [result]);
 
+  const maxStake = Math.min(game?.maxStake || 100, Math.max(game?.minStake || 1, Math.floor(balance || 1)));
+
   const spin = async () => {
     setSpinning(true);
     setResult(null);
 
-    const timer = setInterval(() => setGrid(randomGrid()), 100);
+    const timer = setInterval(() => setGrid(randomGrid()), SPIN_ANIMATION_INTERVAL);
 
     try {
       const round = await playGameRound(game.id, { stakeCkc: toNumber(stake) });
@@ -38,9 +41,6 @@ export default function SlotsGame({ game, balance, onRoundComplete }) {
       setResult(round);
       onRoundComplete(round);
       toast.success(round.payoutCkc > 0 ? `You won ${formatCkc(round.payoutCkc)}` : 'No win this spin');
-      if (soundOn && round.payoutCkc > 0) {
-        toast.success('🔊 Jackpot sound enabled');
-      }
     } catch (err) {
       clearInterval(timer);
       toast.error(getErrorMessage(err, 'Spin failed'));
@@ -81,7 +81,7 @@ export default function SlotsGame({ game, balance, onRoundComplete }) {
           <input
             type="range"
             min={game?.minStake || 1}
-            max={Math.min(game?.maxStake || 100, Math.max(game?.minStake || 1, Math.floor(balance || 1)))}
+            max={maxStake}
             value={stake}
             onChange={(e) => setStake(Number(e.target.value))}
             className="w-full"
@@ -89,7 +89,7 @@ export default function SlotsGame({ game, balance, onRoundComplete }) {
           <input
             type="number"
             min={game?.minStake || 1}
-            max={game?.maxStake || 100}
+            max={maxStake}
             value={stake}
             onChange={(e) => setStake(Number(e.target.value || 0))}
             className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-white"

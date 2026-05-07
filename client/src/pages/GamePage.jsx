@@ -127,12 +127,16 @@ export default function GamePage() {
   }, [game?.id]);
 
   const onRoundComplete = (round) => {
+    if (!game?.id) {
+      return;
+    }
     const nextBalance = toNumber(round.newBalance);
     setBalance(nextBalance);
     setWallet((prev) => ({ ...(prev || {}), ckcBalance: nextBalance }));
+    const localRoundId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     setHistory((prev) => [
       {
-        id: `${Date.now()}`,
+        id: localRoundId,
         outcome: round.outcome,
         stakeCkc: round.stakeCkc,
         payoutCkc: round.payoutCkc,

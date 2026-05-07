@@ -3,6 +3,8 @@ import toast from 'react-hot-toast';
 import { formatCkc, getErrorMessage, playGameRound } from './gameApi';
 
 const TICKET_COST = 5;
+const DRAW_COUNTDOWN_SECONDS = 300;
+const SECONDS_PER_MINUTE = 60;
 
 function randomTicket() {
   const values = new Set();
@@ -16,10 +18,13 @@ export default function LottoGame({ game, onRoundComplete }) {
   const [ticket, setTicket] = useState(() => randomTicket());
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(300);
+  const [secondsLeft, setSecondsLeft] = useState(DRAW_COUNTDOWN_SECONDS);
 
   useEffect(() => {
-    const timer = setInterval(() => setSecondsLeft((prev) => (prev > 0 ? prev - 1 : 300)), 1000);
+    const timer = setInterval(
+      () => setSecondsLeft((prev) => (prev > 0 ? prev - 1 : DRAW_COUNTDOWN_SECONDS)),
+      1000
+    );
     return () => clearInterval(timer);
   }, []);
 
@@ -81,7 +86,10 @@ export default function LottoGame({ game, onRoundComplete }) {
         {loading ? 'Processing...' : 'Buy Ticket'}
       </button>
 
-      <p className="text-sm text-gray-400">Next draw in: {Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, '0')}</p>
+      <p className="text-sm text-gray-400">
+        Next draw in: {Math.floor(secondsLeft / SECONDS_PER_MINUTE)}:
+        {String(secondsLeft % SECONDS_PER_MINUTE).padStart(2, '0')}
+      </p>
 
       {result && (
         <div className="rounded-lg border border-gray-700 bg-gray-800/70 p-3 text-sm text-gray-200">

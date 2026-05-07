@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { formatCkc, getErrorMessage, playGameRound, toNumber } from './gameApi';
 
 const diceFaces = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+const ROLL_ANIMATION_INTERVAL = 90;
 
 export default function DiceGame({ game, balance, onRoundComplete }) {
   const [stake, setStake] = useState(game?.minStake || 1);
@@ -11,16 +12,16 @@ export default function DiceGame({ game, balance, onRoundComplete }) {
   const [rollValue, setRollValue] = useState(1);
   const [result, setResult] = useState(null);
 
-  const face = useMemo(() => diceFaces[(rollValue - 1) % 6], [rollValue]);
+  const face = useMemo(() => diceFaces[(Math.max(1, rollValue) - 1) % 6], [rollValue]);
 
   const roll = async () => {
     setRolling(true);
-    const timer = setInterval(() => setRollValue(Math.floor(Math.random() * 6) + 1), 90);
+    const timer = setInterval(() => setRollValue(Math.floor(Math.random() * 6) + 1), ROLL_ANIMATION_INTERVAL);
 
     try {
       const round = await playGameRound(game.id, { stakeCkc: toNumber(stake), prediction });
       const numericRoll = Number(round.rngResult?.roll || 1);
-      setRollValue(((numericRoll - 1) % 6) + 1);
+      setRollValue(numericRoll);
       setResult(round);
       onRoundComplete(round);
       toast.success(round.outcome === 'win' ? `You won ${formatCkc(round.payoutCkc)}` : 'Dice roll lost');

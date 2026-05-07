@@ -1,12 +1,15 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { formatCkc, getErrorMessage, playGameRound, toNumber } from './gameApi';
+
+const MULTIPLIER_INCREMENT = 0.07;
 
 export default function CrashGame({ game, balance, onRoundComplete }) {
   const [stake, setStake] = useState(game?.minStake || 5);
   const [multiplier, setMultiplier] = useState(1);
   const [active, setActive] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [roundSettled, setRoundSettled] = useState(false);
   const [result, setResult] = useState(null);
   const [graph, setGraph] = useState([1]);
   const [localCrashPoint, setLocalCrashPoint] = useState(2.5);
@@ -18,7 +21,7 @@ export default function CrashGame({ game, balance, onRoundComplete }) {
 
     const timer = setInterval(() => {
       setMultiplier((prev) => {
-        const next = Number((prev + 0.07).toFixed(2));
+        const next = Number((prev + MULTIPLIER_INCREMENT).toFixed(2));
         setGraph((g) => [...g.slice(-39), next]);
         if (next >= localCrashPoint) {
           setActive(false);
@@ -32,13 +35,18 @@ export default function CrashGame({ game, balance, onRoundComplete }) {
 
   const startRound = () => {
     setResult(null);
+    setRoundSettled(false);
     setMultiplier(1);
     setGraph([1]);
     setLocalCrashPoint(Number((Math.random() * 4 + 1.5).toFixed(2)));
     setActive(true);
   };
 
-  const settleRound = async (cashOutAt) => {
+  const settleRound = useCallback(async (cashOutAt) => {
+    if (roundSettled) {
+      return;
+    }
+    setRoundSettled(true);
     setLoading(true);
     try {
       const round = await playGameRound(game.id, {
@@ -54,14 +62,13 @@ export default function CrashGame({ game, balance, onRoundComplete }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [game.id, onRoundComplete, roundSettled, stake]);
 
   useEffect(() => {
-    if (!active && multiplier > 1 && !result && !loading) {
-      settleRound(multiplier + 0.02);
+    if (!active && multiplier > 1 && !result && !loading && !roundSettled) {
+      settleRound(multiplier);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active]);
+  }, [active, loading, multiplier, result, roundSettled, settleRound]);
 
   const bars = useMemo(() => graph.slice(-20), [graph]);
 
