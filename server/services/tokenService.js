@@ -38,7 +38,7 @@ async function assertTermsAcceptedForFirstDeposit(userId) {
     where: { userId, type: 'PURCHASE', status: 'COMPLETED' },
   });
 
-  if (priorPurchaseCount > 0) return;
+  if (priorPurchaseCount > 0) return priorPurchaseCount;
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -50,6 +50,8 @@ async function assertTermsAcceptedForFirstDeposit(userId) {
     err.status = 403;
     throw err;
   }
+
+  return priorPurchaseCount;
 }
 
 // ─── Exported functions ───────────────────────────────────────────────────────
@@ -102,12 +104,8 @@ async function purchaseCkc(userId, packageId) {
     }
   }
 
-  await assertTermsAcceptedForFirstDeposit(userId);
-
   // ── Check for first deposit ───────────────────────────────────────────────
-  const priorPurchaseCount = await prisma.transaction.count({
-    where: { userId, type: 'PURCHASE', status: 'COMPLETED' },
-  });
+  const priorPurchaseCount = await assertTermsAcceptedForFirstDeposit(userId);
   const isFirstDeposit = priorPurchaseCount === 0;
 
   // ── VIP deposit bonus ─────────────────────────────────────────────────────
