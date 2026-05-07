@@ -33,8 +33,8 @@ export default function LoginPage() {
     <div className="mx-auto mt-10 max-w-md rounded-2xl border border-gray-800 bg-gray-900 p-8">
       <h1 className="mb-6 text-center text-2xl font-bold text-yellow-400">Login</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <input name="email" type="email" placeholder="Email" value={form.email} onChange={handleChange} required className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3" />
-        <input name="password" type="password" placeholder="Password" value={form.password} onChange={handleChange} required className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3" />
+        <input aria-label="Email" name="email" type="email" placeholder="Email" value={form.email} onChange={handleChange} required className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3" />
+        <input aria-label="Password" name="password" type="password" placeholder="Password" value={form.password} onChange={handleChange} required className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3" />
         <button disabled={loading} className="w-full rounded-lg bg-yellow-500 py-3 font-semibold text-gray-900 hover:bg-yellow-400 disabled:opacity-60">
           {loading ? 'Signing in...' : 'Sign in'}
         </button>

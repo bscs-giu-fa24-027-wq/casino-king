@@ -16,7 +16,7 @@ function navClassName({ isActive }) {
 }
 
 export default function Navbar() {
-  const { token, user, wallet, unreadCount, logout } = useAuth();
+  const { token, user, wallet, unreadCount, logout, refreshUnreadCount } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const vipLabel = useMemo(() => user?.vipTier?.name || user?.vipTier || 'Bronze', [user]);
@@ -42,7 +42,11 @@ export default function Navbar() {
                 <div className="rounded-full border border-yellow-500/50 bg-yellow-500/10 px-3 py-1 text-sm text-yellow-300">
                   {wallet?.ckcBalance ?? 0} CKC
                 </div>
-                <button className="relative rounded-full border border-gray-700 p-2 text-gray-200 hover:bg-gray-800" aria-label="Notifications">
+                <button
+                  className="relative rounded-full border border-gray-700 p-2 text-gray-200 hover:bg-gray-800"
+                  aria-label={`Notifications (${unreadCount} unread)`}
+                  onClick={refreshUnreadCount}
+                >
                   <Bell size={16} />
                   {unreadCount > 0 && (
                     <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-500 px-1 text-center text-xs text-white">
@@ -88,7 +92,7 @@ export default function Navbar() {
             )}
           </div>
 
-          <button className="rounded-md p-2 text-gray-300 md:hidden" onClick={() => setSidebarOpen(true)}>
+          <button aria-label="Open menu" className="rounded-md p-2 text-gray-300 md:hidden" onClick={() => setSidebarOpen(true)}>
             <Menu size={20} />
           </button>
         </div>

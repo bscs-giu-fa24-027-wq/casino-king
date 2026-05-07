@@ -3,6 +3,8 @@ import api, { setAxiosAuthHandlers } from '../api/axios';
 
 const AuthContext = createContext(null);
 
+const NOTIFICATION_POLL_INTERVAL_MS = 60000;
+
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem('accessToken') || null);
   const [user, setUser] = useState(() => {
@@ -86,7 +88,7 @@ export function AuthProvider({ children }) {
 
         const resolvedUser = {
           ...(data.user || {}),
-          vipTier: data.vipTier || data.user?.vipTier || user?.vipTier || null,
+          vipTier: data.vipTier || data.user?.vipTier || null,
         };
 
         setUser(resolvedUser);
@@ -113,7 +115,7 @@ export function AuthProvider({ children }) {
 
     const timer = setInterval(() => {
       fetchUnreadCount();
-    }, 60000);
+    }, NOTIFICATION_POLL_INTERVAL_MS);
 
     return () => clearInterval(timer);
   }, [fetchUnreadCount, token]);
