@@ -4,11 +4,11 @@ const jwt = require('jsonwebtoken');
 
 /**
  * Signs a JWT for the given user.
- * @param {{ id: string, email: string, role: string }} user
+ * @param {{ id: string, email: string, role: string, countryCode?: string }} user
  * @returns {string} signed JWT
  */
 function signToken(user) {
-  const payload = { id: user.id, email: user.email, role: user.role };
+  const payload = { id: user.id, email: user.email, role: user.role, countryCode: user.countryCode };
   return jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   });

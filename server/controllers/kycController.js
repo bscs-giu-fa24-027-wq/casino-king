@@ -3,6 +3,7 @@
 const prisma = require('../utils/prisma');
 const logger = require('../utils/logger');
 const { createNotification } = require('../services/notificationService');
+const { checkAge } = require('../middleware/geofence');
 
 /**
  * POST /api/kyc/submit
@@ -17,6 +18,10 @@ async function submitKyc(req, res, next) {
       return res.status(400).json({
         error: 'documentType, documentNumber, dateOfBirth, and nationality are required',
       });
+    }
+
+    if (!checkAge(dateOfBirth)) {
+      return res.status(400).json({ error: 'You must be at least 18 years old to submit KYC' });
     }
 
     // If a document image is provided, enforce a reasonable size limit (~5 MB as base64).

@@ -8,6 +8,8 @@ const vipService = require('./vipService');
 const rgService = require('./responsibleGamblingService');
 const { createNotification } = require('./notificationService');
 
+const REQUIRED_TERMS_VERSION = '1.0';
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
@@ -29,6 +31,25 @@ async function _sumDepositedInWindow(userId, windowMs) {
     _sum: { usdAmount: true },
   });
   return result._sum.usdAmount ?? new Prisma.Decimal(0);
+}
+
+async function assertTermsAcceptedForFirstDeposit(userId) {
+  const priorPurchaseCount = await prisma.transaction.count({
+    where: { userId, type: 'PURCHASE', status: 'COMPLETED' },
+  });
+
+  if (priorPurchaseCount > 0) return;
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { termsAcceptedVersion: true, termsAcceptedAt: true },
+  });
+
+  if (!user || user.termsAcceptedVersion !== REQUIRED_TERMS_VERSION || !user.termsAcceptedAt) {
+    const err = new Error('You must accept Terms & Conditions before your first deposit');
+    err.status = 403;
+    throw err;
+  }
 }
 
 // ─── Exported functions ───────────────────────────────────────────────────────
@@ -80,6 +101,8 @@ async function purchaseCkc(userId, packageId) {
       }
     }
   }
+
+  await assertTermsAcceptedForFirstDeposit(userId);
 
   // ── Check for first deposit ───────────────────────────────────────────────
   const priorPurchaseCount = await prisma.transaction.count({
@@ -444,4 +467,3 @@ module.exports = {
   getWalletBalance,
   getTransactionHistory,
 };
-

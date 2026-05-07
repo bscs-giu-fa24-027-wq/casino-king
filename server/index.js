@@ -24,10 +24,11 @@ const vipRoutes = require('./routes/vip');
 const responsibleRoutes = require('./routes/responsible');
 const notificationRoutes = require('./routes/notifications');
 const { dealerRouter, adminDealerRouter } = require('./routes/dealer');
+const complianceRoutes = require('./routes/compliance');
 
 // ─── Middleware Imports ───────────────────────────────────────────────────────
 const errorHandler = require('./middleware/errorHandler');
-const geofence = require('./middleware/geofence');
+const { checkGeofence } = require('./middleware/geofence');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -70,9 +71,6 @@ const authLimiter = rateLimit({
   message: { error: 'Too many auth attempts, please try again later.' },
 });
 
-// ─── Geo-fencing (blocks restricted countries) ───────────────────────────────
-app.use(geofence);
-
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -82,8 +80,8 @@ app.get('/health', (_req, res) => {
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/wallet', walletRoutes);
-app.use('/api/games', gameRoutes);
-app.use('/api/payments', paymentRoutes);
+app.use('/api/games', checkGeofence, gameRoutes);
+app.use('/api/payments', checkGeofence, paymentRoutes);
 app.use('/api/bonuses', bonusRoutes);
 app.use('/api/referrals', referralRoutes);
 app.use('/api/admin/dealers', adminDealerRouter);
@@ -95,6 +93,7 @@ app.use('/api/vip', vipRoutes);
 app.use('/api/responsible', responsibleRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/dealer', dealerRouter);
+app.use('/api/compliance', complianceRoutes);
 
 // ─── 404 Handler ──────────────────────────────────────────────────────────────
 app.use((_req, res) => {
