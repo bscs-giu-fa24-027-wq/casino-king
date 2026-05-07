@@ -1,71 +1,60 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import React, { useMemo, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import api from '../api/axios';
+import { useAuth } from '../context/AuthContext.jsx';
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: '', username: '', password: '' });
-  const [error, setError] = useState('');
+  const [searchParams] = useSearchParams();
+  const referralId = useMemo(() => searchParams.get('ref') || '', [searchParams]);
+  const { login } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    email: '',
+    password: '',
+    fullName: '',
+    countryCode: '',
+    dateOfBirth: '',
+  });
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (e) => setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setLoading(true);
+
     try {
-      const { data } = await axios.post('/api/auth/register', form);
-      localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('refreshToken', data.refreshToken);
-      navigate('/lobby');
+      const query = referralId ? `?ref=${encodeURIComponent(referralId)}` : '';
+      const { data } = await api.post(`/auth/register${query}`, form);
+      login(data.token, data.user);
+      toast.success('Account created');
+      navigate('/');
     } catch (err) {
-      setError(err.response?.data?.error || 'Registration failed');
+      toast.error(err.response?.data?.message || err.response?.data?.error || 'Registration failed');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-md mx-auto mt-16 bg-gray-900 rounded-2xl p-8 shadow-xl border border-gray-800">
-      <h2 className="text-3xl font-bold text-yellow-400 mb-6 text-center">Create Account</h2>
-      {error && <p className="text-red-400 text-sm mb-4 text-center">{error}</p>}
+    <div className="mx-auto mt-10 max-w-md rounded-2xl border border-gray-800 bg-gray-900 p-8">
+      <h1 className="mb-6 text-center text-2xl font-bold text-yellow-400">Register</h1>
+      {referralId && <p className="mb-4 rounded-lg bg-gray-800 px-3 py-2 text-xs text-gray-300">Referral ID: {referralId}</p>}
       <form onSubmit={handleSubmit} className="space-y-4">
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          value={form.email}
-          onChange={handleChange}
-          required
-          className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500"
-        />
-        <input
-          type="text"
-          name="username"
-          placeholder="Username"
-          value={form.username}
-          onChange={handleChange}
-          required
-          className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500"
-        />
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          value={form.password}
-          onChange={handleChange}
-          required
-          className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500"
-        />
-        <button
-          type="submit"
-          className="w-full py-3 bg-yellow-500 text-gray-900 font-bold rounded-lg hover:bg-yellow-400 transition-all"
-        >
-          Create Account
+        <input name="fullName" type="text" placeholder="Full Name" value={form.fullName} onChange={handleChange} required className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3" />
+        <input name="email" type="email" placeholder="Email" value={form.email} onChange={handleChange} required className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3" />
+        <input name="password" type="password" placeholder="Password" value={form.password} onChange={handleChange} required className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3" />
+        <div className="grid grid-cols-2 gap-4">
+          <input name="countryCode" type="text" placeholder="Country (ISO)" maxLength={2} value={form.countryCode} onChange={handleChange} required className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3 uppercase" />
+          <input name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={handleChange} required className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3" />
+        </div>
+        <button disabled={loading} className="w-full rounded-lg bg-yellow-500 py-3 font-semibold text-gray-900 hover:bg-yellow-400 disabled:opacity-60">
+          {loading ? 'Creating...' : 'Create account'}
         </button>
       </form>
-      <p className="mt-4 text-center text-gray-400 text-sm">
-        Already have an account?{' '}
-        <Link to="/login" className="text-yellow-400 hover:underline">
-          Login
-        </Link>
+      <p className="mt-4 text-center text-sm text-gray-400">
+        Already have an account? <Link to="/login" className="text-yellow-400">Login</Link>
       </p>
     </div>
   );
