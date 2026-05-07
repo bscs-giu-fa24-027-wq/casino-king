@@ -22,6 +22,7 @@ const missionRoutes = require('./routes/missions');
 const leaderboardRoutes = require('./routes/leaderboard');
 const vipRoutes = require('./routes/vip');
 const responsibleRoutes = require('./routes/responsible');
+const notificationRoutes = require('./routes/notifications');
 
 // ─── Middleware Imports ───────────────────────────────────────────────────────
 const errorHandler = require('./middleware/errorHandler');
@@ -90,6 +91,7 @@ app.use('/api/missions', missionRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/vip', vipRoutes);
 app.use('/api/responsible', responsibleRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // ─── 404 Handler ──────────────────────────────────────────────────────────────
 app.use((_req, res) => {

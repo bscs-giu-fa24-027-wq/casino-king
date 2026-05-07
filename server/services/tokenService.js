@@ -6,6 +6,7 @@ const logger = require('../utils/logger');
 const { CKC_RATE } = require('../../shared/constants');
 const vipService = require('./vipService');
 const rgService = require('./responsibleGamblingService');
+const { createNotification } = require('./notificationService');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -180,6 +181,17 @@ async function purchaseCkc(userId, packageId) {
     vipBonusPct,
   });
 
+  // Send purchase success notification (best-effort)
+  try {
+    await createNotification(userId, {
+      title: 'Purchase Successful',
+      message: `You purchased ${totalCkc.toFixed(0)} CKC for $${usdPrice.toFixed(2)}. Your wallet has been credited.`,
+      type: 'BONUS',
+    });
+  } catch (notifErr) {
+    logger.warn('Purchase notification failed', { userId, error: notifErr.message });
+  }
+
   return { wallet, transaction: purchaseTx, bonusCkc, vipBonusCkc };
 }
 
@@ -233,6 +245,18 @@ async function redeemCkc(userId, ckcAmount) {
   });
 
   logger.info('CKC redemption requested', { userId, ckcAmount: amount.toFixed(0) });
+
+  // Send cashout notification (best-effort)
+  try {
+    await createNotification(userId, {
+      title: 'Cashout Initiated',
+      message: `Your cashout request for ${amount.toFixed(0)} CKC has been submitted and is being processed.`,
+      type: 'SYSTEM',
+    });
+  } catch (notifErr) {
+    logger.warn('Cashout notification failed', { userId, error: notifErr.message });
+  }
+
   return transaction;
 }
 

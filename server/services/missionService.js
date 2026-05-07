@@ -3,6 +3,7 @@
 const prisma = require('../utils/prisma');
 const logger = require('../utils/logger');
 const tokenService = require('./tokenService');
+const { createNotification } = require('./notificationService');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -120,13 +121,10 @@ async function updateMissionProgress(userId, missionId, increment = 1) {
 
     // Send notification
     try {
-      await prisma.notification.create({
-        data: {
-          userId,
-          title: `Mission complete: ${mission.title}`,
-          message: `You completed "${mission.title}" and earned ${mission.rewardCkc} CKC!`,
-          type: 'BONUS',
-        },
+      await createNotification(userId, {
+        title: `Mission complete: ${mission.title}`,
+        message: `You completed "${mission.title}" and earned ${mission.rewardCkc} CKC!`,
+        type: 'BONUS',
       });
     } catch (err) {
       logger.warn('Failed to send mission notification', { userId, missionId, error: err.message });
@@ -180,13 +178,10 @@ async function triggerRoundsPlayed(userId) {
       if (completed) {
         try { await tokenService.creditBonus(userId, m.rewardCkc, 'BONUS'); } catch (err) { logger.warn('creditBonus failed (triggerRoundsPlayed)', { userId, missionId: m.id, error: err.message }); }
         try {
-          await prisma.notification.create({
-            data: {
-              userId,
-              title: `Mission complete: ${m.title}`,
-              message: `You completed "${m.title}" and earned ${m.rewardCkc} CKC!`,
-              type: 'BONUS',
-            },
+          await createNotification(userId, {
+            title: `Mission complete: ${m.title}`,
+            message: `You completed "${m.title}" and earned ${m.rewardCkc} CKC!`,
+            type: 'BONUS',
           });
         } catch (err) { logger.warn('notification failed (triggerRoundsPlayed)', { userId, missionId: m.id, error: err.message }); }
         logger.info('Mission completed via triggerRoundsPlayed', { userId, missionId: m.id });
@@ -242,13 +237,10 @@ async function triggerWager(userId, stakeCkc) {
     if (completed) {
       try { await tokenService.creditBonus(userId, m.rewardCkc, 'BONUS'); } catch (err) { logger.warn('creditBonus failed (triggerWager)', { userId, missionId: m.id, error: err.message }); }
       try {
-        await prisma.notification.create({
-          data: {
-            userId,
-            title: `Mission complete: ${m.title}`,
-            message: `You completed "${m.title}" and earned ${m.rewardCkc} CKC!`,
-            type: 'BONUS',
-          },
+        await createNotification(userId, {
+          title: `Mission complete: ${m.title}`,
+          message: `You completed "${m.title}" and earned ${m.rewardCkc} CKC!`,
+          type: 'BONUS',
         });
       } catch (err) { logger.warn('notification failed (triggerWager)', { userId, missionId: m.id, error: err.message }); }
       logger.info('Mission completed via triggerWager', { userId, missionId: m.id });
@@ -297,13 +289,10 @@ async function triggerWinStreak(userId, isWin) {
     if (completed) {
       try { await tokenService.creditBonus(userId, m.rewardCkc, 'BONUS'); } catch (err) { logger.warn('creditBonus failed (triggerWinStreak)', { userId, missionId: m.id, error: err.message }); }
       try {
-        await prisma.notification.create({
-          data: {
-            userId,
-            title: `Mission complete: ${m.title}`,
-            message: `You completed "${m.title}" and earned ${m.rewardCkc} CKC!`,
-            type: 'BONUS',
-          },
+        await createNotification(userId, {
+          title: `Mission complete: ${m.title}`,
+          message: `You completed "${m.title}" and earned ${m.rewardCkc} CKC!`,
+          type: 'BONUS',
         });
       } catch (err) { logger.warn('notification failed (triggerWinStreak)', { userId, missionId: m.id, error: err.message }); }
       logger.info('Mission completed via triggerWinStreak', { userId, missionId: m.id });
@@ -351,13 +340,10 @@ async function triggerDeposit(userId) {
     if (completed) {
       try { await tokenService.creditBonus(userId, m.rewardCkc, 'BONUS'); } catch (err) { logger.warn('creditBonus failed (triggerDeposit)', { userId, missionId: m.id, error: err.message }); }
       try {
-        await prisma.notification.create({
-          data: {
-            userId,
-            title: `Mission complete: ${m.title}`,
-            message: `You completed "${m.title}" and earned ${m.rewardCkc} CKC!`,
-            type: 'BONUS',
-          },
+        await createNotification(userId, {
+          title: `Mission complete: ${m.title}`,
+          message: `You completed "${m.title}" and earned ${m.rewardCkc} CKC!`,
+          type: 'BONUS',
         });
       } catch (err) { logger.warn('notification failed (triggerDeposit)', { userId, missionId: m.id, error: err.message }); }
       logger.info('Mission completed via triggerDeposit', { userId, missionId: m.id });

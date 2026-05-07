@@ -3,6 +3,7 @@
 const prisma = require('../utils/prisma');
 const logger = require('../utils/logger');
 const tokenService = require('./tokenService');
+const { createNotification } = require('./notificationService');
 const { getPrizeForRank } = require('../config/leaderboardPrizes');
 
 // ─── Period Helpers ───────────────────────────────────────────────────────────
@@ -155,13 +156,10 @@ async function awardLeaderboardPrizes(period, bounds) {
         data: { prizePaidAt: now },
       });
 
-      await prisma.notification.create({
-        data: {
-          userId: entry.userId,
-          title: `🏆 Leaderboard Prize — ${period === 'WEEKLY' ? 'Weekly' : 'Monthly'} #${entry.rank}`,
-          message: `Congratulations! You finished rank #${entry.rank} on the ${period === 'WEEKLY' ? 'weekly' : 'monthly'} leaderboard and earned ${prizeAmount} CKC!`,
-          type: 'PROMO',
-        },
+      await createNotification(entry.userId, {
+        title: `🏆 Leaderboard Prize — ${period === 'WEEKLY' ? 'Weekly' : 'Monthly'} #${entry.rank}`,
+        message: `Congratulations! You finished rank #${entry.rank} on the ${period === 'WEEKLY' ? 'weekly' : 'monthly'} leaderboard and earned ${prizeAmount} CKC!`,
+        type: 'PROMO',
       });
 
       awarded++;

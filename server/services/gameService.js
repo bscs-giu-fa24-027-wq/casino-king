@@ -9,6 +9,7 @@ const tokenService = require('./tokenService');
 const { updateLeaderboard } = require('./leaderboardService');
 const vipService = require('./vipService');
 const rgService = require('./responsibleGamblingService');
+const { createNotification } = require('./notificationService');
 
 // ─── Card Utilities ───────────────────────────────────────────────────────────
 
@@ -502,6 +503,16 @@ async function playGame(userId, gameId, body) {
   let newWallet;
   if (payoutCkc.greaterThan(new Prisma.Decimal(0))) {
     newWallet = await tokenService.creditWin(userId, payoutCkc, round.id);
+
+    // Send big win notification if payout > 10x stake (best-effort)
+    const bigWinThreshold = stakeDecimal.mul(new Prisma.Decimal(10));
+    if (payoutCkc.greaterThan(bigWinThreshold)) {
+      createNotification(userId, {
+        title: '🎉 Big Win!',
+        message: `Incredible! You won ${payoutCkc.toFixed(0)} CKC — that's ${gameResult.multiplier}x your stake on ${game.name}!`,
+        type: 'WIN',
+      }).catch((err) => logger.warn('Big win notification failed', { userId, error: err.message }));
+    }
   } else {
     newWallet = await tokenService.getWalletBalance(userId);
   }
