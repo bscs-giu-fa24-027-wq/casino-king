@@ -96,6 +96,8 @@ model User {
   status                    UserStatus @default(ACTIVE)
   role                      UserRole   @default(PLAYER)
   lastLoginAt               DateTime?
+  termsAcceptedVersion      String?
+  termsAcceptedAt           DateTime?
   hasDedicatedSupport       Boolean    @default(false)
   hasPersonalAccountManager Boolean    @default(false)
   createdAt                 DateTime   @default(now())

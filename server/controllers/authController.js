@@ -7,6 +7,7 @@ const { signToken } = require('../services/jwtService');
 const { checkDailyBonus } = require('../services/bonusService');
 const { claimReferral } = require('../services/referralService');
 const { createNotification } = require('../services/notificationService');
+const { checkAge, isCountryBlocked } = require('../middleware/geofence');
 const logger = require('../utils/logger');
 
 const SALT_ROUNDS = 12;
@@ -14,28 +15,8 @@ const DEFAULT_LOGOUT_TTL_SECONDS = 3600;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function getBlockedCountries() {
-  return (process.env.BLOCKED_COUNTRIES || '')
-    .split(',')
-    .map((c) => c.trim().toUpperCase())
-    .filter(Boolean);
-}
-
 function isBlocked(countryCode) {
-  const list = getBlockedCountries();
-  return list.length > 0 && list.includes((countryCode || '').toUpperCase());
-}
-
-function isAtLeast18(dob) {
-  const now = new Date();
-  const birthDate = new Date(dob);
-  if (isNaN(birthDate.getTime())) return false;
-  let age = now.getFullYear() - birthDate.getFullYear();
-  const monthDiff = now.getMonth() - birthDate.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birthDate.getDate())) {
-    age -= 1;
-  }
-  return age >= 18;
+  return isCountryBlocked((countryCode || '').toUpperCase());
 }
 
 function validatePassword(password) {
@@ -96,7 +77,7 @@ async function register(req, res, next) {
       });
     }
 
-    if (!isAtLeast18(dateOfBirth)) {
+    if (!checkAge(dateOfBirth)) {
       return res.status(400).json({ error: 'You must be at least 18 years old to register' });
     }
 

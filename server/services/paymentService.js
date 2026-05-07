@@ -79,6 +79,7 @@ async function createCheckout(userId, packageId) {
   const usdPrice = new Prisma.Decimal(pkg.usdPrice);
 
   await _checkRgLimits(userId, usdPrice);
+  await tokenService.assertTermsAcceptedForFirstDeposit(userId);
 
   const amountCents = Math.round(usdPrice.toNumber() * 100);
 
