@@ -73,13 +73,10 @@ async function submitKyc(req, res, next) {
             },
           });
 
-          await prisma.notification.create({
-            data: {
-              userId,
-              title: 'KYC Approved',
-              message: `Hi ${fullName}, your identity verification has been approved. You now have full access to all features.`,
-              type: 'KYC',
-            },
+          await createNotification(userId, {
+            title: 'KYC Approved',
+            message: `Hi ${fullName}, your identity verification has been approved. You now have full access to all features.`,
+            type: 'KYC',
           });
 
           logger.info('KYC auto-approved (development simulation)', { userId });

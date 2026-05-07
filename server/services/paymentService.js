@@ -8,6 +8,7 @@ const tokenService = require('./tokenService');
 const { CKC_RATE } = require('../../shared/constants');
 const { creditReferrer } = require('./referralService');
 const { triggerDeposit } = require('./missionService');
+const { createNotification } = require('./notificationService');
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2024-04-10',
@@ -153,15 +154,6 @@ async function handleWebhook(rawBody, signature) {
         logger.warn('triggerDeposit failed', { userId, error: missionErr.message });
       }
 
-      await prisma.notification.create({
-        data: {
-          userId,
-          title: 'Purchase successful',
-          message: 'Your CKC token purchase was completed successfully.',
-          type: 'SYSTEM',
-        },
-      });
-
       logger.info('checkout.session.completed handled', { userId, packageId, sessionId: session.id });
     } catch (err) {
       logger.error('Error handling checkout.session.completed', {
@@ -192,13 +184,10 @@ async function handleWebhook(rawBody, signature) {
     // Notify user if userId is in metadata
     const userId = intent.metadata && intent.metadata.userId;
     if (userId) {
-      await prisma.notification.create({
-        data: {
-          userId,
-          title: 'Payment failed',
-          message: 'Your payment could not be processed. Please try again.',
-          type: 'SYSTEM',
-        },
+      await createNotification(userId, {
+        title: 'Payment failed',
+        message: 'Your payment could not be processed. Please try again.',
+        type: 'SYSTEM',
       });
     }
 

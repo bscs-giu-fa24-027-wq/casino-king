@@ -126,13 +126,10 @@ async function checkVipUpgrade(userId) {
       data: { tierId: bestTier.id },
     });
 
-    await prisma.notification.create({
-      data: {
-        userId,
-        title: `VIP Upgrade: ${bestTier.name}!`,
-        message: `Congratulations! You've been upgraded to the ${bestTier.name} VIP tier. Enjoy your exclusive perks!`,
-        type: 'PROMO',
-      },
+    await createNotification(userId, {
+      title: `VIP Upgrade: ${bestTier.name}!`,
+      message: `Congratulations! You've been upgraded to the ${bestTier.name} VIP tier. Enjoy your exclusive perks!`,
+      type: 'PROMO',
     });
 
     await _applyTierPerks(userId, bestTier);
