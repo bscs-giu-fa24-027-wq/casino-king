@@ -2,13 +2,9 @@ import React from 'react';
 
 export default function WalletPage() {
   return (
-    <div className="max-w-lg mx-auto">
-      <h2 className="text-3xl font-bold text-yellow-400 mb-8">My Wallet</h2>
-      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8">
-        <p className="text-gray-400 text-center">
-          Connect your account to view your balance and transactions.
-        </p>
-      </div>
-    </div>
+    <section className="rounded-2xl border border-gray-800 bg-gray-900 p-6">
+      <h1 className="text-2xl font-bold text-yellow-400">Wallet</h1>
+      <p className="mt-2 text-gray-400">Placeholder for balances, cashout form, and transaction history.</p>
+    </section>
   );
 }

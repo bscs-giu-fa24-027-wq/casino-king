@@ -1,31 +1,22 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 
-const GAMES = [
-  { slug: 'slots', name: '🎰 Slot Machine', description: 'Classic 3-reel slots. Match symbols to win up to 50×!', minBet: '$0.50' },
-  { slug: 'roulette', name: '🎡 Roulette', description: 'European roulette — bet on numbers, red or black.', minBet: '$1.00' },
-  { slug: 'blackjack', name: '🃏 Blackjack', description: 'Beat the dealer to 21. Blackjack pays 2.5×!', minBet: '$1.00' },
-];
+const featured = ['Slots', 'Blackjack', 'Roulette', 'Crash', 'Dice', 'Poker'];
 
 export default function LobbyPage() {
   return (
-    <div>
-      <h2 className="text-3xl font-bold text-yellow-400 mb-8">Game Lobby</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {GAMES.map((game) => (
-          <div
-            key={game.slug}
-            className="bg-gray-900 border border-gray-800 rounded-2xl p-6 hover:border-yellow-500/50 transition-all cursor-pointer"
-          >
-            <h3 className="text-2xl font-bold text-white mb-2">{game.name}</h3>
-            <p className="text-gray-400 mb-4">{game.description}</p>
-            <p className="text-sm text-gray-500">Min bet: {game.minBet}</p>
-            <button className="mt-4 w-full py-2 bg-yellow-500 text-gray-900 font-bold rounded-lg hover:bg-yellow-400 transition-all">
-              Play
-            </button>
+    <section className="space-y-6">
+      <div className="rounded-2xl border border-gray-800 bg-gradient-to-r from-yellow-500/10 to-purple-500/10 p-6">
+        <h1 className="text-3xl font-bold text-yellow-400">Lobby</h1>
+        <p className="mt-2 text-gray-300">Welcome to Casino King. Pick a game and start playing.</p>
+      </div>
+      <div className="grid gap-4 md:grid-cols-3">
+        {featured.map((game) => (
+          <div key={game} className="rounded-xl border border-gray-800 bg-gray-900 p-4">
+            <h2 className="text-lg font-semibold text-white">{game}</h2>
+            <p className="mt-1 text-sm text-gray-400">Integration point for {game} game card.</p>
           </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 }
