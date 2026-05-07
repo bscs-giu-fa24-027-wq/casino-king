@@ -66,8 +66,10 @@ enum LeaderboardPeriod {
 }
 
 enum DealerStatus {
+  PENDING
   ACTIVE
   SUSPENDED
+  BANNED
 }
 
 enum NotificationType {
@@ -281,9 +283,11 @@ model Dealer {
   id            String       @id @default(uuid())
   userId        String       @unique
   companyName   String
+  businessRegNumber String?
+  country       String?
   commissionPct Decimal      @default(20)
   totalRevenue  Decimal      @default(0)
-  status        DealerStatus @default(ACTIVE)
+  status        DealerStatus @default(PENDING)
   createdAt     DateTime     @default(now())
 
   user User @relation(fields: [userId], references: [id])

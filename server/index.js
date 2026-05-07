@@ -23,6 +23,7 @@ const leaderboardRoutes = require('./routes/leaderboard');
 const vipRoutes = require('./routes/vip');
 const responsibleRoutes = require('./routes/responsible');
 const notificationRoutes = require('./routes/notifications');
+const { dealerRouter, adminDealerRouter } = require('./routes/dealer');
 
 // ─── Middleware Imports ───────────────────────────────────────────────────────
 const errorHandler = require('./middleware/errorHandler');
@@ -85,6 +86,7 @@ app.use('/api/games', gameRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/bonuses', bonusRoutes);
 app.use('/api/referrals', referralRoutes);
+app.use('/api/admin/dealers', adminDealerRouter);
 app.use('/api/admin', adminRoutes);
 app.use('/api/kyc', kycRoutes);
 app.use('/api/missions', missionRoutes);
@@ -92,6 +94,7 @@ app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/vip', vipRoutes);
 app.use('/api/responsible', responsibleRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/dealer', dealerRouter);
 
 // ─── 404 Handler ──────────────────────────────────────────────────────────────
 app.use((_req, res) => {
